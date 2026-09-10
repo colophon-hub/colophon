@@ -17,6 +17,12 @@ export const PODCAST_SETTINGS_DEFAULTS = {
   sourceFeedResolvedUrl: '',
   sourceFeedLastSyncedAt: '',
   sourceFeedUrls: [],
+  hostingMode: 'external',
+  nativeSince: '',
+  migrationState: 'idle',
+  legacyFeedUrl: '',
+  directoryRedirectUrl: '',
+  canonicalBaseUrl: '',
 }
 
 function authoritativeMode(mode) {

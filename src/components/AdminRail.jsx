@@ -26,6 +26,7 @@ const NAV_GROUPS = [
     { to: adminRoutes.publications, label: 'Publications', module: 'publications' },
     { to: adminRoutes.campaigns, label: 'Campaigns', capability: 'publishing:write', module: 'campaigns' },
     { to: adminRoutes.investigations, label: 'Investigations', capability: 'publishing:write', module: 'investigations' },
+    { to: adminRoutes.courses, label: 'Courses', capability: 'publishing:write', module: 'courses' },
     { to: adminRoutes.podcasts, label: 'Podcasts', module: 'podcasts' },
     { to: adminRoutes.translations, label: 'Translations', capability: 'publishing:write', module: 'translations' },
     { to: adminRoutes.feeds, label: 'Feeds & Syndication' },
@@ -125,6 +126,7 @@ export function AdminRail({ collapsed, onToggleCollapsed }) {
             {hasCapability('publishing:write') && moduleEnabled('articles') ? <Link to={adminRoutes.collections} className="wp-admin-topbar__dropdown-link">Collection</Link> : null}
             {hasCapability('publishing:write') && moduleEnabled('campaigns') ? <Link to={adminRoutes.campaigns} className="wp-admin-topbar__dropdown-link">Campaign</Link> : null}
             {hasCapability('publishing:write') && moduleEnabled('investigations') ? <Link to={adminRoutes.investigations} className="wp-admin-topbar__dropdown-link">Investigation</Link> : null}
+            {hasCapability('publishing:write') && moduleEnabled('courses') ? <Link to={adminRoutes.courses} className="wp-admin-topbar__dropdown-link">Course</Link> : null}
             {hasCapability('publishing:write') && moduleEnabled('publications') ? <Link to={adminRoutes.publications} className="wp-admin-topbar__dropdown-link">Publication</Link> : null}
             {hasCapability('media:write') && moduleEnabled('audiolab') ? <Link to={adminRoutes.audiolab} className="wp-admin-topbar__dropdown-link">AudioLab Project</Link> : null}
           </AdminBarMenu> : null}

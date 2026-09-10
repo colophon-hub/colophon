@@ -36,3 +36,19 @@ Never copy a DNS target from somebody else's Colophon installation.
 ## Other hosts
 
 Docker/VPS support is a target, but it should not be advertised as one-command deployment until a recipe supplies the frontend runtime, server/API runtime, persistent SQL-compatible storage, persistent media storage, secrets, scheduled jobs, backups, routing, HTTPS, and upgrades.
+
+## Optional module configuration
+
+The core server can run without the integrations below. Configure only the features the publication uses.
+
+### Verified campaign signatures
+
+Configure `SIGNATURE_EMAIL_PROVIDER` as `resend` or `webhook`, plus `SIGNATURE_EMAIL_FROM` and the provider settings documented in `CAMPAIGN_SIGNATURES.md`. Set a random `SIGNATURE_RATE_SALT` on shared servers.
+
+### Native podcast hosting
+
+Native audio/artwork uses `colophon_MEDIA_BUCKET` and `BF_DB`. Scheduled external-feed refresh can authenticate with `PODCAST_REFRESH_TOKEN`; the external distribution worker can authenticate with `EPISODE_WORKER_TOKEN`. Optional YouTube/PeerTube adapter endpoints are documented in `PODCAST_HOSTING.md`.
+
+### Public-records lookup
+
+`FOIA_GOV_API_KEY` enables the optional editor-only U.S. federal agency directory. The Public Records Desk itself does not require this integration and remains jurisdiction-neutral.

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'colophon-pwa-v1'
+const CACHE_VERSION = 'colophon-pwa-v2'
 const DB_NAME = 'colophon-browser-local'
 const DB_VERSION = 1
 const BLOBS = 'blobs'
@@ -52,8 +52,25 @@ async function localBlobResponse(request, url) {
   return new Response(row.blob, { status: 200, headers })
 }
 
+
+async function storeShareTarget(request) {
+  const form = await request.formData()
+  const db = await openDb()
+  const now = new Date().toISOString()
+  const record = { title: String(form.get('title') || '').slice(0,220), text: String(form.get('text') || '').slice(0,20000), url: String(form.get('url') || '').slice(0,4000), files: [], createdAt: now }
+  const files = [...form.getAll('media'), ...form.getAll('files')].filter((value) => value && typeof value.arrayBuffer === 'function')
+  for (const file of files.slice(0,12)) {
+    const key = `share-${Date.now()}-${Math.random().toString(36).slice(2,10)}`
+    await new Promise((resolve,reject)=>{const tx=db.transaction(BLOBS,'readwrite');const q=tx.objectStore(BLOBS).put({key,blob:file,metadata:{filename:file.name||'shared-file',mimeType:file.type||'application/octet-stream',title:file.name||'Shared file'}});q.onsuccess=()=>resolve();q.onerror=()=>reject(q.error)})
+    record.files.push({ key, filename:file.name||'shared-file', mimeType:file.type||'application/octet-stream', size:Number(file.size||0) })
+  }
+  await new Promise((resolve,reject)=>{const tx=db.transaction('records','readwrite');const q=tx.objectStore('records').put({key:'share-target:pending',value:record});q.onsuccess=()=>resolve();q.onerror=()=>reject(q.error)})
+  return Response.redirect(new URL('./#/share-target', request.url).toString(), 303)
+}
+
 self.addEventListener('fetch', (event) => {
   const request = event.request
+  if (request.method === 'POST' && new URL(request.url).pathname.endsWith('/share-target')) { event.respondWith(storeShareTarget(request).catch(() => new Response('Shared item could not be captured.', { status: 400 }))); return }
   if (request.method !== 'GET') return
   const url = new URL(request.url)
   if (url.origin !== self.location.origin) return

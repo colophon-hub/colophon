@@ -1,103 +1,24 @@
-function isAdminPostEditor() {
-  if (typeof window === 'undefined') return false
-  return /\/(wp-admin\/post-new\.php|wp-admin\/native-bridge|native-bridge)(?:\/|$)/.test(window.location.pathname)
-}
+let savedBodySelection = null
+let inspector = null
+let inspectedElement = null
 
-function escapeHtmlAttribute(value = '') {
-  return String(value || '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-}
-
-function escapeHtmlText(value = '') {
-  return String(value || '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-}
-
-function selectedMediaButton() {
-  return document.querySelector('.wp-media-modal .wp-media-item.is-selected')
-}
-
-function selectedMediaData() {
-  const button = selectedMediaButton()
-  if (!button) return null
-  const url = button.getAttribute('data-media-url') || ''
-  const title = button.getAttribute('data-media-title') || 'Download file'
-  const mediaType = (button.getAttribute('data-media-type') || '').toLowerCase()
-  const mimeType = (button.getAttribute('data-media-mime') || '').toLowerCase()
-  const isImage = mediaType === 'image' || mediaType === 'svg' || mimeType.startsWith('image/')
-  if (!url || isImage) return null
-  return { url, title, mediaType, mimeType }
-}
-
-function insertHtmlIntoVisualEditor(markup) {
-  const editor = document.querySelector('.native-content-editor__visual[contenteditable="true"]')
-  if (!editor) return false
-  editor.focus()
-  const selection = window.getSelection()
-  const range = selection?.rangeCount ? selection.getRangeAt(0) : null
-  if (range && editor.contains(range.commonAncestorContainer)) {
-    range.deleteContents()
-    const fragment = range.createContextualFragment(markup)
-    const lastNode = fragment.lastChild
-    range.insertNode(fragment)
-    if (lastNode) {
-      const nextRange = document.createRange()
-      nextRange.setStartAfter(lastNode)
-      nextRange.collapse(true)
-      selection.removeAllRanges()
-      selection.addRange(nextRange)
-    }
-  } else {
-    editor.insertAdjacentHTML('beforeend', markup)
-  }
-  editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertHTML', data: markup }))
-  editor.dispatchEvent(new Event('blur', { bubbles: true }))
-  return true
-}
-
-function insertTextIntoTextarea(markup) {
-  const textarea = document.querySelector('.native-content-editor__textarea')
-  if (!textarea) return false
-  const start = textarea.selectionStart ?? textarea.value.length
-  const end = textarea.selectionEnd ?? textarea.value.length
-  textarea.value = `${textarea.value.slice(0, start)}\n${markup}\n${textarea.value.slice(end)}`
-  textarea.dispatchEvent(new Event('input', { bubbles: true }))
-  textarea.dispatchEvent(new Event('change', { bubbles: true }))
-  return true
-}
-
-function closeMediaModal() {
-  const closeButton = [...document.querySelectorAll('.wp-media-modal .button')].find((button) => button.textContent?.trim().toLowerCase() === 'close')
-  closeButton?.click()
-}
-
-function handleSelectClick(event) {
-  if (!isAdminPostEditor()) return
-  const button = event.target?.closest?.('button')
-  if (!button || button.textContent?.trim().toLowerCase() !== 'select') return
-  if (!button.closest('.wp-media-modal')) return
-
-  const media = selectedMediaData()
-  if (!media) return
-
-  event.preventDefault()
-  event.stopPropagation()
-  if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation()
-
-  const details = button.closest('.wp-media-modal__details')
-  const caption = details?.querySelector('textarea')?.value?.trim?.() || ''
-  const label = caption || media.title || 'Download file'
-  const escapedUrl = escapeHtmlAttribute(media.url)
-  const escapedLabel = escapeHtmlText(label)
-  const markup = `<p><a href="${escapedUrl}" target="_blank" rel="noopener noreferrer">${escapedLabel}</a></p><p><br /></p>`
-
-  if (!insertHtmlIntoVisualEditor(markup)) insertTextIntoTextarea(markup)
-  closeMediaModal()
-}
-
-window.addEventListener('click', handleSelectClick, true)
+function isAdminPostEditor(){return typeof window!=='undefined'&&/\/(wp-admin\/post-new\.php|wp-admin\/native-bridge|native-bridge)(?:\/|$)/.test(window.location.pathname)}
+function editorElements(){return{visual:document.querySelector('.native-content-editor__visual[contenteditable="true"]'),textarea:document.querySelector('.native-content-editor__textarea')}}
+function rememberBodySelection(){const {visual,textarea}=editorElements();if(textarea&&document.activeElement===textarea){savedBodySelection={mode:'text',start:textarea.selectionStart??textarea.value.length,end:textarea.selectionEnd??textarea.value.length};return}const sel=window.getSelection?.();if(!visual||!sel?.rangeCount)return;const range=sel.getRangeAt(0);if(visual.contains(range.commonAncestorContainer))savedBodySelection={mode:'visual',range:range.cloneRange()}}
+function restoreBodySelection(){const {visual,textarea}=editorElements();if(savedBodySelection?.mode==='text'&&textarea){textarea.focus();textarea.selectionStart=Math.min(savedBodySelection.start,textarea.value.length);textarea.selectionEnd=Math.min(savedBodySelection.end,textarea.value.length);return true}if(savedBodySelection?.mode==='visual'&&visual&&savedBodySelection.range&&visual.contains(savedBodySelection.range.commonAncestorContainer)){visual.focus();const sel=window.getSelection();sel.removeAllRanges();sel.addRange(savedBodySelection.range);return true}return false}
+function escAttr(v=''){return String(v||'').replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;')}
+function escText(v=''){return String(v||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}
+function selectedMediaData(){const button=document.querySelector('.wp-media-modal .wp-media-item.is-selected');if(!button)return null;const url=button.dataset.mediaUrl||button.getAttribute('data-url')||'',title=button.dataset.mediaTitle||button.textContent?.trim()||'Media',mediaType=(button.dataset.mediaType||'').toLowerCase(),mimeType=(button.dataset.mediaMime||button.dataset.mimeType||'').toLowerCase();return url?{url,title,mediaType,mimeType}:null}
+function markupForMedia(media,caption=''){const url=escAttr(media.url),label=escText(caption||media.title||'Download file'),type=String(media.mimeType||''),kind=String(media.mediaType||'');if(kind==='image'||kind==='svg'||type.startsWith('image/'))return `<figure data-colophon-media="image" style="max-width:100%"><img src="${url}" alt="${escAttr(caption||'')}" style="max-width:100%;height:auto">${caption?`<figcaption>${escText(caption)}</figcaption>`:''}</figure><p><br></p>`;if(kind==='audio'||type.startsWith('audio/'))return `<figure data-colophon-media="audio"><audio controls preload="metadata" src="${url}" style="width:100%"></audio>${caption?`<figcaption>${escText(caption)}</figcaption>`:''}</figure><p><br></p>`;if(kind==='video'||type.startsWith('video/'))return `<figure data-colophon-media="video"><video controls preload="metadata" src="${url}" style="max-width:100%;height:auto"></video>${caption?`<figcaption>${escText(caption)}</figcaption>`:''}</figure><p><br></p>`;if(kind==='pdf'||type==='application/pdf')return `<figure data-colophon-media="pdf"><iframe src="${url}" title="${escAttr(caption||media.title||'PDF document')}" style="width:100%;height:70vh;min-height:560px;border:1px solid #dcdcde"></iframe>${caption?`<figcaption>${escText(caption)}</figcaption>`:''}<p><a href="${url}" target="_blank" rel="noopener noreferrer">Open PDF in a new tab</a></p></figure><p><br></p>`;return `<p><a data-colophon-media="file" href="${url}" target="_blank" rel="noopener noreferrer">${label}</a></p><p><br></p>`}
+function insertVisual(markup){const {visual}=editorElements();if(!visual)return false;restoreBodySelection();visual.focus();const sel=window.getSelection(),range=sel?.rangeCount?sel.getRangeAt(0):null;if(range&&visual.contains(range.commonAncestorContainer)){range.deleteContents();const frag=range.createContextualFragment(markup),last=frag.lastChild;range.insertNode(frag);if(last){const next=document.createRange();next.setStartAfter(last);next.collapse(true);sel.removeAllRanges();sel.addRange(next)}}else document.execCommand('insertHTML',false,markup);visual.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertHTML',data:markup}));rememberBodySelection();return true}
+function insertText(markup){const {textarea}=editorElements();if(!textarea)return false;restoreBodySelection();const start=textarea.selectionStart??textarea.value.length,end=textarea.selectionEnd??textarea.value.length;textarea.setRangeText(`\n${markup}\n`,start,end,'end');textarea.dispatchEvent(new Event('input',{bubbles:true}));return true}
+function closeModal(){[...document.querySelectorAll('.wp-media-modal button')].find(b=>/^(close|×)$/i.test(b.textContent?.trim()||''))?.click()}
+function handleSelect(event){if(!isAdminPostEditor())return;const button=event.target?.closest?.('button');if(!button||!button.closest('.wp-media-modal')||button.textContent?.trim().toLowerCase()!=='select')return;const media=selectedMediaData();if(!media)return;event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();const caption=button.closest('.wp-media-modal__details')?.querySelector('textarea')?.value?.trim()||'';const markup=markupForMedia(media,caption);if(!insertVisual(markup))insertText(markup);closeModal()}
+function maybeRememberBeforeModal(event){if(!isAdminPostEditor())return;const trigger=event.target?.closest?.('button,a');if(!trigger)return;const text=(trigger.textContent||'').trim().toLowerCase();if(trigger.matches('[data-open-media],[aria-controls*="media"]')||text.includes('add media')||text.includes('choose media')||text==='choose')rememberBodySelection()}
+function findInspectable(target,visual){if(!target||!visual||!visual.contains(target))return null;return target.closest('img,audio,video,iframe,a[data-colophon-media],figure[data-colophon-media]')}
+function openInspector(element){inspectedElement=element;inspector?.remove();const target=element.matches('figure')?(element.querySelector('img,audio,video,iframe,a')||element):element;const figure=element.closest('figure[data-colophon-media]');const caption=figure?.querySelector('figcaption');const box=document.createElement('div');box.className='colophon-media-inspector';box.setAttribute('role','dialog');box.setAttribute('aria-label','Media inspector');box.innerHTML=`<strong>Media</strong><label>URL<input data-field="url"></label><label>Alt / link text<input data-field="text"></label><label>Caption<input data-field="caption"></label><label>Width<input data-field="width" placeholder="100%"></label><label>Height<input data-field="height" placeholder="auto"></label><label>Alignment<select data-field="align"><option value="">Default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label><div><button type="button" data-action="apply">Apply</button><button type="button" data-action="remove">Remove</button><button type="button" data-action="close">Close</button></div>`;document.body.appendChild(box);inspector=box;const url=box.querySelector('[data-field=url]'),text=box.querySelector('[data-field=text]'),cap=box.querySelector('[data-field=caption]'),width=box.querySelector('[data-field=width]'),height=box.querySelector('[data-field=height]'),align=box.querySelector('[data-field=align]');url.value=target.getAttribute('href')||target.getAttribute('src')||'';text.value=target.tagName==='IMG'?target.getAttribute('alt')||'':target.tagName==='A'?target.textContent||'':target.getAttribute('title')||'';cap.value=caption?.textContent||'';width.value=target.style.width||target.getAttribute('width')||'';height.value=target.style.height||target.getAttribute('height')||'';align.value=(figure||target).dataset.align||'';box.addEventListener('click',(e)=>{const action=e.target?.dataset.action;if(action==='close'){box.remove();inspector=null;return}if(action==='remove'){(figure||element).remove();box.remove();inspector=null;dispatchEditorInput();return}if(action==='apply'){if(target.tagName==='A')target.setAttribute('href',url.value);else target.setAttribute('src',url.value);if(target.tagName==='IMG')target.setAttribute('alt',text.value);else if(target.tagName==='A')target.textContent=text.value;else target.setAttribute('title',text.value);if(width.value)target.style.width=width.value;if(height.value)target.style.height=height.value;if(figure){let fc=caption;if(cap.value&&!fc){fc=document.createElement('figcaption');figure.appendChild(fc)}if(fc)fc.textContent=cap.value;figure.dataset.align=align.value;figure.style.textAlign=align.value==='center'?'center':align.value||'';if(align.value==='left'||align.value==='right')figure.style.float=align.value;else figure.style.float=''}dispatchEditorInput()}})}
+function dispatchEditorInput(){const {visual}=editorElements();visual?.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'formatSetBlockTextDirection'}))}
+function handleEditorClick(event){const {visual}=editorElements();const element=findInspectable(event.target,visual);if(element)openInspector(element)}
+function boot(){if(!isAdminPostEditor())return;document.addEventListener('selectionchange',()=>{if(!document.querySelector('.wp-media-modal'))rememberBodySelection()});document.addEventListener('pointerdown',maybeRememberBeforeModal,true);document.addEventListener('click',handleSelect,true);document.addEventListener('dblclick',handleEditorClick,true)}
+if(typeof window!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot()}
+export { markupForMedia, rememberBodySelection, restoreBodySelection }

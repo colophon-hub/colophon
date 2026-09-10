@@ -26,6 +26,9 @@ import { CampaignAdminPage } from './components/CampaignAdminPage'
 import { CampaignContributorPage } from './components/CampaignContributorPage'
 import { CampaignBenefitKitPage } from './components/CampaignBenefitKitPage'
 import { CampaignInstagramConnectPage } from './components/CampaignInstagramConnectPage'
+import { ShareTargetReviewPage } from './components/ShareTargetReviewPage'
+import { CoursesAdminPage, CourseReaderPage, CoursesIndexPage } from './components/CoursePages'
+import { PublishingModuleGate } from './components/PublishingModuleGate'
 import { FeedSettingsAdminPage } from './components/FeedSettingsAdminPage'
 import { PublicFeedsPage } from './components/PublicFeedsPage'
 import { GalleryArchivePage } from './components/GalleryArchivePage'
@@ -292,6 +295,7 @@ export default function App() {
           <Layout>
             <Routes>
               <Route path="/welcome" element={<DesktopWelcomePage />} />
+              <Route path="/share-target" element={<ShareTargetReviewPage />} />
               <Route path="/publish-online" element={<DesktopPublishOnlinePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/wp-login" element={<LoginPage />} />
@@ -314,6 +318,8 @@ export default function App() {
               <Route path={publicRoutes.featuredCampaign} element={<CampaignPage />} />
               <Route path={publicRoutes.featuredCampaignCoverage} element={<CampaignCoverageArchivePage />} />
               <Route path={publicRoutes.campaign} element={<CampaignRoute />} />
+              <Route path={publicRoutes.courses} element={<PublishingModuleGate moduleId="courses"><CoursesIndexPage /></PublishingModuleGate>} />
+              <Route path={publicRoutes.course} element={<PublishingModuleGate moduleId="courses"><CourseReaderPage /></PublishingModuleGate>} />
               <Route path={publicRoutes.feeds} element={<PublicFeedsPage />} />
               <Route path={publicRoutes.gallery} element={<GalleryArchivePage />} />
 
@@ -338,6 +344,7 @@ export default function App() {
               <Route path={adminRoutes.collections} element={protect(<CollectionsAdminPage />)} />
               <Route path="/campaigns-admin" element={protect(<Navigate to={adminRoutes.campaigns} replace />)} />
               <Route path={adminRoutes.campaigns} element={protect(<CampaignAdminPage />)} />
+              <Route path={adminRoutes.courses} element={protect(<CoursesAdminPage />)} />
               <Route path="/publications-admin" element={protect(<Navigate to={adminRoutes.publications} replace />)} />
               <Route path={adminRoutes.publications} element={protect(<PublicationSystemPage />)} />
               <Route path="/feeds-admin" element={protect(<Navigate to={adminRoutes.feeds} replace />)} />

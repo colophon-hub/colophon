@@ -2,6 +2,7 @@ import { resolvePublicSitePermission } from '../_lib/publicSiteAuth.js'
 import { databaseUnavailable, getBoundDb } from '../_lib/database.js'
 import { upsertMediaAsset } from '../_lib/mediaAssets.js'
 import { writeAuditLog, inferActorFromRequest } from '../_lib/auditLog.js'
+import { validateMediaBytes } from '../_lib/mediaSignature.js'
 
 const MAX_FILE_UPLOAD_BYTES = 1024 * 1024 * 250
 const CANONICAL_MEDIA_BINDING = 'colophon_MEDIA_BUCKET'
@@ -44,6 +45,7 @@ export async function onRequestOptions() {
       allow: 'GET,POST,OPTIONS',
       'access-control-allow-methods': 'GET,POST,OPTIONS',
       'access-control-allow-headers': 'content-type',
+      'x-content-type-options': 'nosniff',
     },
   })
 }
@@ -59,7 +61,7 @@ export async function onRequestPost(context) {
     if (!storage?.bucket) {
       return json({
         ok: false,
-        error: `Media storage binding missing. Configure the R2 binding ${CANONICAL_MEDIA_BINDING}.`,
+        error: `Media storage binding missing. Configure ${CANONICAL_MEDIA_BINDING}.`,
         requiredBinding: CANONICAL_MEDIA_BINDING,
       }, 503)
     }
@@ -81,13 +83,18 @@ export async function onRequestPost(context) {
     if (!size) return json({ ok: false, error: 'media file is empty' }, 400)
     if (size > MAX_FILE_UPLOAD_BYTES) return json({ ok: false, error: 'media file is too large for this upload endpoint' }, 413)
 
+    const bytes = await file.arrayBuffer()
+    const validation = validateMediaBytes(bytes, mimeType)
+    if (!validation.ok) {
+      return json({ ok: false, error: validation.reason, detectedType: validation.detectedType || null }, 415)
+    }
+
     const mediaId = createId('media')
     const filename = sanitizeFilename(form.get('filename') || file.name || `${mediaId}.${extensionForMime(mimeType)}`)
     const title = String(form.get('title') || filename.replace(/\.[^.]+$/, '') || filename).slice(0, 240)
     const mediaType = mediaTypeForMime(mimeType)
     const folder = sanitizeSegment(form.get('folder') || mediaType)
     const storageKey = `media/uploads/${folder}/${mediaId}-${filename}`
-    const bytes = await file.arrayBuffer()
     const createdAt = new Date().toISOString()
 
     await storage.bucket.put(storageKey, bytes, {
@@ -152,7 +159,7 @@ export async function onRequestPost(context) {
       },
     })
   } catch (error) {
-    return json({ ok: false, error: String(error?.message || error) }, 500)
+    return json({ ok: false, error: String(error?.message || error) }, Number(error?.status) || 500)
   }
 }
 
@@ -163,7 +170,7 @@ export async function onRequestGet(context) {
 
     const url = new URL(context.request.url)
     const storageKey = String(url.searchParams.get('key') || '').trim()
-    if (!storageKey || storageKey.includes('..') || !(storageKey.startsWith('media/uploads/') || storageKey.startsWith('media/campaign-contributors/') || storageKey.startsWith('media/campaign-instagram/'))) {
+    if (!storageKey || storageKey.includes('..') || !(storageKey.startsWith('media/uploads/') || storageKey.startsWith('media/campaign-contributors/') || storageKey.startsWith('media/campaign-instagram/') || storageKey.startsWith('media/podcasts/'))) {
       return text('missing or invalid media key', 400)
     }
 
@@ -183,6 +190,7 @@ export async function onRequestGet(context) {
     headers.set('content-type', contentType)
     headers.set('accept-ranges', 'bytes')
     headers.set('cache-control', 'public, max-age=31536000, immutable')
+    headers.set('x-content-type-options', 'nosniff')
     headers.set('content-disposition', `${shouldRenderInline(contentType) ? 'inline' : 'attachment'}; filename="${sanitizeFilename(url.searchParams.get('filename') || storageKey.split('/').pop() || 'download')}"`)
 
     if (range) {
@@ -244,11 +252,7 @@ function normalizeMimeType(value) {
 }
 
 function isAllowedFileType(mimeType) {
-  if (ALLOWED_FILE_TYPES.has(mimeType)) return true
-  if (mimeType.startsWith('image/')) return true
-  if (mimeType.startsWith('text/')) return true
-  if (mimeType.startsWith('font/')) return true
-  return false
+  return ALLOWED_FILE_TYPES.has(mimeType)
 }
 
 function mediaTypeForMime(mimeType = '') {
@@ -348,9 +352,9 @@ function parseRange(header = '', size = 0) {
 }
 
 function json(data, status = 200) {
-  return new Response(JSON.stringify(data, null, 2), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } })
+  return new Response(JSON.stringify(data, null, 2), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } })
 }
 
 function text(body, status = 200) {
-  return new Response(body, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } })
+  return new Response(body, { status, headers: { 'content-type': 'text/plain; charset=utf-8', 'x-content-type-options': 'nosniff' } })
 }

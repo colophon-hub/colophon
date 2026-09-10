@@ -36,7 +36,11 @@ export async function onRequestPost(context) {
   try {
     const body = await context.request.json()
     const showId = String(body?.showId || body?.settings?.id || '').trim()
-    const result = await upsertPodcastShow(context.env.BF_DB, body?.settings || body || {}, {
+    const incoming = body?.settings || body || {}
+    const result = await upsertPodcastShow(context.env.BF_DB, {
+      ...incoming,
+      canonicalBaseUrl: incoming.canonicalBaseUrl || new URL(context.request.url).origin,
+    }, {
       showId,
       makeDefault: Boolean(body?.makeDefault),
     })

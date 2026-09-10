@@ -12,6 +12,37 @@ import { resolvePublicSitePermission } from './_lib/publicSiteAuth.js'
 import { writeAuditLog, inferActorFromRequest } from './_lib/auditLog.js'
 import { databaseUnavailable, getBoundDb } from './_lib/database.js'
 
+const PRIVATE_NATIVE_FIELDS = new Set([
+  'sourceNotes',
+  'transcriptNotes',
+  'workflowState',
+  'editorialNotes',
+  'moderationNotes',
+  'storageKey',
+  'podcastStorageKey',
+  'podcastMediaId',
+  'privateUrl',
+  'internalNotes',
+  'internalMetadata',
+  'providerSecrets',
+  'providerConfig',
+  'contributorId',
+  'contactEmail',
+  'contactPhone',
+])
+
+const PRIVATE_ASSET_FIELDS = new Set([
+  'storageKey',
+  'customMetadata',
+  'contributorId',
+  'campaignId',
+  'privateUrl',
+  'internalNotes',
+  'editorialNotes',
+  'moderationNotes',
+  'providerData',
+])
+
 export async function onRequestOptions(context) {
   const permission = await resolvePublicSitePermission(context)
 
@@ -46,7 +77,7 @@ export async function onRequestGet(context) {
       return json({
         ok: true,
         mode: 'd1',
-        item,
+        item: permission.canEdit ? item : publicNativeItem(item),
       })
     }
 
@@ -60,7 +91,7 @@ export async function onRequestGet(context) {
     return json({
       ok: true,
       mode: 'd1',
-      items,
+      items: permission.canEdit ? items : items.map(publicNativeItem),
     })
   } catch (error) {
     return json({
@@ -189,12 +220,38 @@ async function handleWrite(context) {
   }
 }
 
+export function publicNativeItem(item) {
+  if (!item || typeof item !== 'object') return item
+
+  const projected = omitFields(item, PRIVATE_NATIVE_FIELDS)
+  if (Array.isArray(projected.relatedAssets)) {
+    projected.relatedAssets = projected.relatedAssets.map(publicRelatedAsset)
+  }
+
+  return projected
+}
+
+export function publicRelatedAsset(asset) {
+  if (!asset || typeof asset !== 'object') return asset
+  return omitFields(asset, PRIVATE_ASSET_FIELDS)
+}
+
+function omitFields(value, fields) {
+  const output = {}
+  for (const [key, fieldValue] of Object.entries(value || {})) {
+    if (fields.has(key)) continue
+    output[key] = fieldValue
+  }
+  return output
+}
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
     },
   })
 }
