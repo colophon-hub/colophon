@@ -78,4 +78,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          gh release upload "$RELEASE_TAG" release/* --clobber
+          shopt -s nullglob
+          files=(
+            release/*.exe
+            release/*.dmg
+            release/*.zip
+            release/*.AppImage
+            release/*.deb
+          )
+        
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No installer files found."
+            exit 1
+          fi
+        
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
