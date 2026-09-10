@@ -8,7 +8,7 @@ import {
   saveInvestigationRevision,
   upsertInvestigation,
 } from './_lib/investigations.js'
-import { normalizeInvestigation } from '../../shared/investigationModel.js'
+import { normalizeInvestigation, publicInvestigation } from '../../shared/investigationModel.js'
 
 export async function onRequestOptions(context) {
   const permission = await resolvePublicSitePermission(context)
@@ -27,9 +27,10 @@ export async function onRequestGet(context) {
     if (slug || id) {
       const item = await getInvestigation(db, slug || id)
       if (!item || (!includeDrafts && item.publicationStatus !== 'published')) return json({ ok: true, mode: 'd1', item: null })
-      return json({ ok: true, mode: 'd1', item })
+      return json({ ok: true, mode: 'd1', item: includeDrafts ? item : publicInvestigation(item) })
     }
-    return json({ ok: true, mode: 'd1', items: await listInvestigations(db, { includeDrafts }) })
+    const items = await listInvestigations(db, { includeDrafts })
+    return json({ ok: true, mode: 'd1', items: includeDrafts ? items : items.map(publicInvestigation) })
   } catch (error) {
     return json({ ok: false, error: String(error?.message || error) }, 500)
   }

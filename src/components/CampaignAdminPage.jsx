@@ -1,3 +1,4 @@
+import { CampaignSignaturesAdmin } from './CampaignSignatures'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AdminFrame } from './AdminRail'
@@ -147,7 +148,8 @@ export function CampaignAdminPage() {
         {!isNew ? <RevisionHistory revisions={revisions} state={revisionState} restoringId={restoringRevisionId} onRestore={restoreRevision} /> : null}
       </> : null}</div></div> : null}
     <MediaPickerModal open={Boolean(mediaTarget)} title="Choose Campaign Media" onClose={() => setMediaTarget(null)} onPick={(media) => { if (!mediaTarget) return; const url = String(media?.url || ''); if (mediaTarget.section === 'hero') patch({ heroImage: url, heroAlt: draft.heroAlt || media?.alt || media?.altText || '' }); else { patchRow(mediaTarget.section, mediaTarget.index, mediaTarget.key, mediaTarget.key === 'downloadUrl' ? String(media?.downloadUrl || url) : url); if (mediaTarget.section === 'graphics' && mediaTarget.key === 'imageUrl') { if (!draft.graphics?.[mediaTarget.index]?.title) patchRow('graphics', mediaTarget.index, 'title', String(media?.title || '')); if (!draft.graphics?.[mediaTarget.index]?.alt) patchRow('graphics', mediaTarget.index, 'alt', String(media?.alt || media?.altText || '')); if (!draft.graphics?.[mediaTarget.index]?.caption) patchRow('graphics', mediaTarget.index, 'caption', String(media?.caption || '')); patchRow('graphics', mediaTarget.index, 'downloadUrl', String(media?.downloadUrl || url)) } } setMediaTarget(null) }} />
-  </main></AdminFrame>
+  <CampaignSignaturesAdmin campaign={draft} />
+      </main></AdminFrame>
 }
 
 function CampaignIdentity({ draft, isNew, onPatch, onTitle, onSlug, onPickHero }) {

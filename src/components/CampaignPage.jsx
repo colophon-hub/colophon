@@ -8,6 +8,7 @@ import { selectHubCoverage } from '../lib/campaignCoverage'
 import { setDocumentMeta } from '../lib/documentMeta'
 import { EditableText } from './EditableText'
 import { EditableLink } from './EditableLink'
+import { CampaignSignatures } from './CampaignSignatures'
 import { CampaignBenefitToolkit, CampaignDispatches, CampaignDonation, CampaignQuestionForm, CampaignSocialArchive } from './CampaignCorrespondence'
 
 const AI_CAMPAIGN_SLUG = 'example-campaign'
@@ -399,6 +400,7 @@ export function CampaignPage() {
       ) : null}
 
       {showSection('signatories') ? <SignatoryCarousel signatories={signatories} title={sectionTitle('signatories')} sectionKey="signatories" /> : null}
+      <CampaignSignatures campaign={campaign} />
 
       {showSection('social') ? <SocialSection campaign={campaign} social={social} copyState={copyState} copyCampaignLink={copyCampaignLink} isAiCampaign={isAiCampaign} title={sectionTitle('social')} sectionKey="social" /> : null}
       </OrderedCampaignSections>

@@ -1,0 +1,18 @@
+import { courseProgressSummary, lessonSequence } from '../../shared/courseModel.js'
+export const COURSE_PROGRESS_VERSION = 1
+function key(slug){ return `colophon-course-progress-v1:${slug}` }
+export function emptyCourseProgress(slug=''){ return { version:COURSE_PROGRESS_VERSION, courseSlug:String(slug||''), completedLessons:[], completedActivities:{}, bookmarks:[], notes:{}, lastLessonId:'', updatedAt:new Date().toISOString() } }
+export function normalizeCourseProgress(input={}, slug=''){
+  const base=emptyCourseProgress(slug||input.courseSlug)
+  return {...base, version:COURSE_PROGRESS_VERSION, courseSlug:String(slug||input.courseSlug||''), completedLessons:unique(input.completedLessons), completedActivities:Object.fromEntries(Object.entries(input.completedActivities||{}).map(([k,v])=>[k,unique(v)])), bookmarks:unique(input.bookmarks), notes:Object.fromEntries(Object.entries(input.notes||{}).map(([k,v])=>[k,String(v||'').slice(0,20000)])), lastLessonId:String(input.lastLessonId||''), updatedAt:String(input.updatedAt||base.updatedAt)}
+}
+export function loadCourseProgress(slug){ try{return normalizeCourseProgress(JSON.parse(localStorage.getItem(key(slug))||'{}'),slug)}catch{return emptyCourseProgress(slug)} }
+export function saveCourseProgress(progress){ const p=normalizeCourseProgress(progress); p.updatedAt=new Date().toISOString(); try{localStorage.setItem(key(p.courseSlug),JSON.stringify(p))}catch{} return p }
+export function setLessonComplete(progress, lessonId, complete=true){ const p=normalizeCourseProgress(progress); const set=new Set(p.completedLessons); complete?set.add(lessonId):set.delete(lessonId); return saveCourseProgress({...p,completedLessons:[...set],lastLessonId:lessonId}) }
+export function setActivityComplete(progress, lessonId, activityId, complete=true){ const p=normalizeCourseProgress(progress); const set=new Set(p.completedActivities[lessonId]||[]); complete?set.add(activityId):set.delete(activityId); return saveCourseProgress({...p,completedActivities:{...p.completedActivities,[lessonId]:[...set]},lastLessonId:lessonId}) }
+export function toggleCourseBookmark(progress, lessonId){ const p=normalizeCourseProgress(progress); const set=new Set(p.bookmarks); set.has(lessonId)?set.delete(lessonId):set.add(lessonId); return saveCourseProgress({...p,bookmarks:[...set],lastLessonId:lessonId}) }
+export function setCourseNote(progress, lessonId, note){ const p=normalizeCourseProgress(progress); return saveCourseProgress({...p,notes:{...p.notes,[lessonId]:String(note||'').slice(0,20000)},lastLessonId:lessonId}) }
+export function exportCourseProgress(progress){ return JSON.stringify(normalizeCourseProgress(progress),null,2) }
+export function importCourseProgress(text, course){ let parsed; try{parsed=JSON.parse(String(text||''))}catch{throw new Error('Progress file is not valid JSON.')} if(Number(parsed?.version)!==COURSE_PROGRESS_VERSION) throw new Error('Unsupported progress-file version.'); const slug=String(course?.slug||''); if(parsed.courseSlug!==slug) throw new Error('This progress file belongs to a different course.'); const allowed=new Set(lessonSequence(course).map(l=>l.id)); const p=normalizeCourseProgress(parsed,slug); p.completedLessons=p.completedLessons.filter(id=>allowed.has(id)); p.bookmarks=p.bookmarks.filter(id=>allowed.has(id)); p.notes=Object.fromEntries(Object.entries(p.notes).filter(([id])=>allowed.has(id))); p.completedActivities=Object.fromEntries(Object.entries(p.completedActivities).filter(([id])=>allowed.has(id))); return saveCourseProgress(p) }
+export { courseProgressSummary }
+function unique(v){return [...new Set((Array.isArray(v)?v:[]).map(String).filter(Boolean))]}

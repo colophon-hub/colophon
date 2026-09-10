@@ -1,4 +1,5 @@
 import { isBrowserLocalRuntime } from './runtime'
+import { normalizeCourse, publicCourse } from '../../shared/courseModel.js'
 import {
   localDelete,
   localDeleteBlob,
@@ -324,6 +325,39 @@ async function handleCampaignRevisions(url, input, init) {
   return json({ ok: false, error: 'Unsupported campaign revision operation.' }, 405)
 }
 
+
+async function handleCourses(url, input, init) {
+  const method = requestMethod(input, init)
+  const editor = url.searchParams.get('editor') === '1'
+  if (method === 'GET') {
+    const key = url.searchParams.get('id') || url.searchParams.get('slug') || ''
+    let items = await localList('course:')
+    items = items.map((item) => normalizeCourse(item))
+    if (!editor) items = items.map(publicCourse).filter(Boolean)
+    if (key) {
+      const item = items.find((course) => course.id === key || course.slug === key) || null
+      return json(item ? { ok: true, item, mode: 'browser-local' } : { ok: false, error: 'course not found', mode: 'browser-local' }, item ? 200 : 404)
+    }
+    return json({ ok: true, items, mode: 'browser-local' })
+  }
+  if (method === 'POST' || method === 'PUT') {
+    const body = await readJsonBody(input, init)
+    const incoming = normalizeCourse(body.item || body)
+    const existing = await localGet(`course:${incoming.id}`)
+    if (existing && Number(incoming.revision || 0) !== Number(existing.revision || 0)) return json({ ok: false, error: 'Course changed since it was loaded. Reload before saving.' }, 409)
+    const item = normalizeCourse({ ...incoming, revision: Number(existing?.revision || 0) + 1, publishedVersion: incoming.status === 'published' ? Number(existing?.publishedVersion || 0) + 1 : Number(existing?.publishedVersion || 0), publishedAt: incoming.status === 'published' ? new Date().toISOString() : incoming.publishedAt })
+    await localSet(`course:${item.id}`, item)
+    return json({ ok: true, item, mode: 'browser-local' })
+  }
+  if (method === 'DELETE') {
+    const body = await readJsonBody(input, init).catch(() => ({}))
+    const id = String(body.id || url.searchParams.get('id') || '')
+    if (id) await localDelete(`course:${id}`)
+    return json({ ok: true, removed: Boolean(id), mode: 'browser-local' })
+  }
+  return json({ ok: false, error: 'Unsupported course operation.' }, 405)
+}
+
 async function handleTranslations(url, input, init) {
   const method = requestMethod(input, init)
   if (method === 'GET') {
@@ -369,6 +403,7 @@ async function handleLocalApi(url, input, init) {
   if (path === '/api/collections') return handleSimpleCollection('collection', url, input, init)
   if (path === '/api/publications') return handleSimpleCollection('publication', url, input, init, 'publication')
   if (path === '/api/podcast-settings') return handlePodcastSettings(url, input, init)
+  if (path === '/api/courses') return handleCourses(url, input, init)
   if (path === '/api/campaigns') return handleCampaigns(url, input, init)
   if (path === '/api/campaign-revisions') return handleCampaignRevisions(url, input, init)
   if (path === '/api/native-translations') return handleTranslations(url, input, init)

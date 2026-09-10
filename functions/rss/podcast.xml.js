@@ -158,7 +158,7 @@ function getAudioAsset(item = {}) {
 function isPublicAudioUrl(value = '') {
   const raw = String(value || '').trim()
   if (!raw || raw.startsWith('audiolab-local://')) return false
-  return /^https?:\/\//i.test(raw) || raw.startsWith('/api/audiolab/media')
+  return /^https?:\/\//i.test(raw) || raw.startsWith('/api/audiolab/media') || raw.startsWith('/api/podcast-media')
 }
 
 function absolutize(value = '', origin = '') {

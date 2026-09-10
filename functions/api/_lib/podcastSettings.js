@@ -20,6 +20,12 @@ export const PODCAST_SETTINGS_DEFAULTS = Object.freeze({
   sourceFeedResolvedUrl: '',
   sourceFeedLastSyncedAt: '',
   sourceFeedUrls: [],
+  hostingMode: 'external',
+  nativeSince: '',
+  migrationState: 'idle',
+  legacyFeedUrl: '',
+  directoryRedirectUrl: '',
+  canonicalBaseUrl: '',
 })
 
 export async function ensureSiteSettingsTable(db) {
@@ -65,6 +71,12 @@ export function normalizePodcastSettings(input = {}) {
     sourceFeedResolvedUrl: cleanUrl(value.sourceFeedResolvedUrl),
     sourceFeedLastSyncedAt: cleanDate(value.sourceFeedLastSyncedAt),
     sourceFeedUrls,
+    hostingMode: value.hostingMode === 'native' ? 'native' : 'external',
+    nativeSince: cleanDate(value.nativeSince),
+    migrationState: ['idle', 'queued', 'running', 'paused', 'complete', 'failed'].includes(String(value.migrationState || '')) ? String(value.migrationState) : 'idle',
+    legacyFeedUrl: cleanUrl(value.legacyFeedUrl),
+    directoryRedirectUrl: cleanUrl(value.directoryRedirectUrl),
+    canonicalBaseUrl: cleanUrl(value.canonicalBaseUrl),
     createdAt: cleanDate(value.createdAt) || new Date().toISOString(),
     updatedAt: cleanDate(value.updatedAt) || new Date().toISOString(),
   }
@@ -115,7 +127,7 @@ export async function upsertPodcastShow(db, input = {}, options = {}) {
     ...input,
     id: existing?.id || proposedSlug,
     slug: proposedSlug,
-    rssFeedUrl: podcastFeedUrl(proposedSlug),
+    rssFeedUrl: podcastFeedUrl(proposedSlug, input.canonicalBaseUrl || existing?.canonicalBaseUrl || 'https://example.invalid'),
     sourceFeedUrls: uniqueUrls([
       ...podcastShowSourceUrls(existing),
       ...(Array.isArray(input.sourceFeedUrls) ? input.sourceFeedUrls : []),
@@ -149,6 +161,7 @@ export function podcastShowSourceUrls(show = {}) {
 
 export function podcastShowOwnsEntry(show, entry) {
   if (!show || !entry || entry.contentType !== 'podcast') return false
+  if (String(entry.podcastShowId || '').trim() === String(show.id || '').trim()) return true
   const sourceUrl = cleanUrl(entry.sourceUrl)
   if (!sourceUrl) return false
   return podcastShowSourceUrls(show).includes(sourceUrl)

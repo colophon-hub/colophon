@@ -4,6 +4,7 @@ import { AdminFrame } from './AdminRail'
 import { importPodcastFeed, previewPodcastFeed, syncPodcastFeed } from '../lib/podcastImportApi'
 import { loadPodcastSettings, loadPodcastShowsAsync, savePodcastSettings } from '../lib/podcastSettings'
 import { adminRoutes } from '../routing/routes'
+import { PodcastHostingPanel } from './PodcastHostingPanel'
 
 const IMPORT_BATCH_LIMIT = 250
 
@@ -261,6 +262,7 @@ export function PodcastSettingsPage() {
               <input type="text" value={settings.rssFeedUrl || 'Created after the podcast is saved or imported'} readOnly />
               <small>Each podcast gets a separate URL such as /feeds/podcasts/Example Podcast-now.xml. This is the URL to submit to podcast directories.</small>
             </label>
+            <label><span>Canonical public base URL</span><input type="url" value={settings.canonicalBaseUrl || ''} onChange={(e) => update('canonicalBaseUrl', e.target.value)} placeholder={typeof window !== 'undefined' ? window.location.origin : 'https://publisher.example'} /><small>Leave blank to use the current server origin when saving. Set this when the public podcast domain differs from the admin origin.</small></label>
             <label><span>Podcast title</span><input value={settings.podcastTitle} onChange={(e) => update('podcastTitle', e.target.value)} placeholder="Podcast title" /></label>
             <label><span>Author</span><input value={settings.author} onChange={(e) => update('author', e.target.value)} placeholder="Colophon" /></label>
             <label><span>Description</span><textarea rows="4" value={settings.description} onChange={(e) => update('description', e.target.value)} placeholder="Describe the show for podcast directories." /></label>
@@ -268,6 +270,8 @@ export function PodcastSettingsPage() {
             <label><span>Default cover art</span><input type="url" value={settings.defaultCoverArt} onChange={(e) => update('defaultCoverArt', e.target.value)} placeholder="https://…/podcast-cover.jpg" /></label>
           </div>
         </section>
+
+        {settings.id ? <PodcastHostingPanel show={settings} onShowChange={(next) => { setSettings(next); setShows((current) => current.map((item) => item.id === next.id ? next : item)) }} /> : null}
 
         <section className="wp-meta-box">
           <h2>Directory metadata</h2>

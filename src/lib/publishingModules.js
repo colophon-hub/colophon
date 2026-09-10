@@ -6,6 +6,7 @@ export const PUBLISHING_MODULES = [
   { id: 'podcasts', label: 'Podcasts', description: 'Podcast shows, episodes and feeds.' },
   { id: 'campaigns', label: 'Campaigns', description: 'Campaign hubs, updates, resources and coverage.' },
   { id: 'investigations', label: 'Investigations', description: 'Living reporting hubs for evidence, chronology, records requests and open questions.' },
+  { id: 'courses', label: 'Courses', description: 'Self-paced courses with local-first learner progress and editorial review.' },
   { id: 'publications', label: 'Publications', description: 'Zines, readers, editions and print collections.' },
   { id: 'translations', label: 'Translations', description: 'Translation workflow and language variants.' },
   { id: 'printlab', label: 'PrintLab', description: 'Printable layouts, posters and PDF-oriented work.' },

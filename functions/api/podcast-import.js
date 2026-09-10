@@ -13,123 +13,84 @@ export async function onRequestPost(context) {
   }
   const db = context.env?.BF_DB
   if (!db) return json({ ok: false, error: 'podcast RSS import unavailable: BF_DB is not bound' }, 503)
-
   try {
     const body = await context.request.json()
-    const action = String(body?.action || 'preview').trim().toLowerCase()
-    const feedUrl = String(body?.feedUrl || '').trim()
-    const requestedShowId = String(body?.showId || '').trim()
-    if (!feedUrl) return json({ ok: false, error: 'feedUrl is required' }, 400)
-
-    const feed = await fetchPodcastFeed(feedUrl)
-    const existing = await listNativeEntries(db, { includeFuture: true })
-    const show = requestedShowId
-      ? await findPodcastShow(db, requestedShowId)
-      : await findPodcastShow(db, feed.sourceUrl)
-    const decorated = decorateEpisodes(feed, existing, show)
-
-    if (action === 'preview') {
-      return json({
-        ok: true,
-        mode: 'd1',
-        action: 'preview',
-        sourceUrl: feed.sourceUrl,
-        resolvedUrl: feed.resolvedUrl,
-        podcast: feed.parsed.podcast,
-        show,
-        episodes: decorated,
-        counts: summarizePreview(decorated),
-      })
-    }
-
-    if (!['import', 'sync', 'resync'].includes(action)) {
-      return json({ ok: false, error: 'action must be preview, import, or sync' }, 400)
-    }
-
-    const selectedKeys = Array.isArray(body?.selectedKeys)
-      ? new Set(body.selectedKeys.map((value) => String(value || '')).filter(Boolean))
-      : null
-    const requested = decorated.filter((episode) => !selectedKeys || selectedKeys.has(episode.key))
-    if (requested.length > MAX_IMPORT_EPISODES) {
-      return json({ ok: false, error: `import at most ${MAX_IMPORT_EPISODES} episodes at a time; select a smaller batch` }, 400)
-    }
-
-    const syncExisting = body?.syncExisting !== false
-    const importChannelSettings = body?.importChannelSettings !== false
-    const registryBefore = await readPodcastShows(db)
-    const imported = feed.parsed.podcast
-    const now = new Date().toISOString()
-    const showResult = await upsertPodcastShow(db, {
-      ...(show || {}),
-      ...(importChannelSettings ? {
-        podcastTitle: imported.title || show?.podcastTitle || 'Podcast',
-        author: imported.author || show?.author || 'Colophon',
-        description: imported.description || show?.description || '',
-        websiteUrl: imported.websiteUrl || show?.websiteUrl || 'https://example.invalid',
-        defaultCoverArt: imported.imageUrl || show?.defaultCoverArt || '',
-        language: imported.language || show?.language || 'en-us',
-        category: imported.category || show?.category || 'News',
-        explicit: Boolean(imported.explicit),
-        ownerName: imported.ownerName || show?.ownerName || '',
-        ownerEmail: imported.ownerEmail || show?.ownerEmail || '',
-      } : {
-        podcastTitle: show?.podcastTitle || imported.title || 'Podcast',
-      }),
-      sourceFeedUrl: feed.sourceUrl,
-      sourceFeedResolvedUrl: feed.resolvedUrl,
-      sourceFeedLastSyncedAt: now,
-      sourceFeedUrls: [...podcastShowSourceUrls(show), feed.sourceUrl, feed.resolvedUrl],
-    }, {
-      showId: show?.id || requestedShowId,
-      makeDefault: registryBefore.shows.length === 0,
-    })
-    const targetShow = showResult.show
-
-    const result = await importEpisodes({
-      db,
-      feed,
-      show: targetShow,
-      episodes: requested,
-      existing,
-      syncExisting,
-    })
-
-    await writeAuditLog(db, {
-      action: action === 'import' ? 'podcasts.rss.import' : 'podcasts.rss.sync',
-      entityType: 'podcast_show',
-      entityId: targetShow.id,
-      actor: inferActorFromRequest(context.request),
-      detail: {
-        showId: targetShow.id,
-        showTitle: targetShow.podcastTitle,
-        sourceUrl: feed.sourceUrl,
-        resolvedUrl: feed.resolvedUrl,
-        canonicalFeedUrl: targetShow.rssFeedUrl,
-        selected: requested.length,
-        created: result.created,
-        updated: result.updated,
-        skipped: result.skipped,
-        channelSettingsImported: importChannelSettings,
-      },
-    })
-
-    return json({
-      ok: true,
-      mode: 'd1',
-      action,
-      sourceUrl: feed.sourceUrl,
-      resolvedUrl: feed.resolvedUrl,
-      podcast: feed.parsed.podcast,
-      show: targetShow,
-      settings: targetShow,
-      shows: showResult.shows,
-      defaultShowId: showResult.defaultShowId,
-      result,
-    })
+    return json(await runPodcastImport(db, body, { actor: inferActorFromRequest(context.request), canonicalBaseUrl: new URL(context.request.url).origin }))
   } catch (error) {
-    return json({ ok: false, error: String(error?.message || error) }, 400)
+    return json({ ok: false, error: String(error?.message || error) }, Number(error?.status) || 400)
   }
 }
+
+export async function runPodcastImport(db, body = {}, options = {}) {
+  const action = String(body?.action || 'preview').trim().toLowerCase()
+  const feedUrl = String(body?.feedUrl || '').trim()
+  const requestedShowId = String(body?.showId || '').trim()
+  if (!feedUrl) throw httpError('feedUrl is required', 400)
+
+  const feed = await fetchPodcastFeed(feedUrl)
+  const existing = await listNativeEntries(db, { includeFuture: true })
+  const show = requestedShowId
+    ? await findPodcastShow(db, requestedShowId)
+    : await findPodcastShow(db, feed.sourceUrl)
+  const decorated = decorateEpisodes(feed, existing, show)
+
+  if (action === 'preview') {
+    return {
+      ok: true, mode: 'd1', action: 'preview', sourceUrl: feed.sourceUrl, resolvedUrl: feed.resolvedUrl,
+      podcast: feed.parsed.podcast, show, episodes: decorated, counts: summarizePreview(decorated),
+    }
+  }
+  if (!['import', 'sync', 'resync'].includes(action)) throw httpError('action must be preview, import, sync, or resync', 400)
+  if (show?.hostingMode === 'native') throw httpError('This podcast is native-hosted. External RSS resync is disabled so it cannot overwrite first-party episodes.', 409)
+
+  const selectedKeys = Array.isArray(body?.selectedKeys)
+    ? new Set(body.selectedKeys.map((value) => String(value || '')).filter(Boolean))
+    : null
+  const requested = decorated.filter((episode) => !selectedKeys || selectedKeys.has(episode.key))
+  if (requested.length > MAX_IMPORT_EPISODES) throw httpError(`import at most ${MAX_IMPORT_EPISODES} episodes at a time; select a smaller batch`, 400)
+
+  const syncExisting = body?.syncExisting !== false
+  const importChannelSettings = body?.importChannelSettings !== false
+  const registryBefore = await readPodcastShows(db)
+  const imported = feed.parsed.podcast
+  const now = new Date().toISOString()
+  const showResult = await upsertPodcastShow(db, {
+    canonicalBaseUrl: options.canonicalBaseUrl || show?.canonicalBaseUrl || '',
+    ...(show || {}),
+    ...(importChannelSettings ? {
+      podcastTitle: imported.title || show?.podcastTitle || 'Podcast',
+      author: imported.author || show?.author || 'Colophon',
+      description: imported.description || show?.description || '',
+      websiteUrl: imported.websiteUrl || show?.websiteUrl || 'https://example.invalid',
+      defaultCoverArt: imported.imageUrl || show?.defaultCoverArt || '',
+      language: imported.language || show?.language || 'en-us',
+      category: imported.category || show?.category || 'News',
+      explicit: Boolean(imported.explicit),
+      ownerName: imported.ownerName || show?.ownerName || '',
+      ownerEmail: imported.ownerEmail || show?.ownerEmail || '',
+    } : { podcastTitle: show?.podcastTitle || imported.title || 'Podcast' }),
+    sourceFeedUrl: feed.sourceUrl,
+    sourceFeedResolvedUrl: feed.resolvedUrl,
+    sourceFeedLastSyncedAt: now,
+    sourceFeedUrls: [...podcastShowSourceUrls(show), feed.sourceUrl, feed.resolvedUrl],
+  }, { showId: show?.id || requestedShowId, makeDefault: registryBefore.shows.length === 0 })
+  const targetShow = showResult.show
+
+  const result = await importEpisodes({ db, feed, show: targetShow, episodes: requested, existing, syncExisting })
+  await writeAuditLog(db, {
+    action: action === 'import' ? 'podcasts.rss.import' : 'podcasts.rss.sync',
+    entityType: 'podcast_show', entityId: targetShow.id, actor: options.actor || 'system',
+    detail: { showId: targetShow.id, showTitle: targetShow.podcastTitle, sourceUrl: feed.sourceUrl,
+      resolvedUrl: feed.resolvedUrl, canonicalFeedUrl: targetShow.rssFeedUrl, selected: requested.length,
+      created: result.created, updated: result.updated, skipped: result.skipped, channelSettingsImported: importChannelSettings },
+  })
+
+  return { ok: true, mode: 'd1', action, sourceUrl: feed.sourceUrl, resolvedUrl: feed.resolvedUrl,
+    podcast: feed.parsed.podcast, show: targetShow, settings: targetShow, shows: showResult.shows,
+    defaultShowId: showResult.defaultShowId, result }
+}
+
+function httpError(message, status = 400) { const error = new Error(message); error.status = status; return error }
 
 function decorateEpisodes(feed, existing, show) {
   const importedByGuid = new Map()

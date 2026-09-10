@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS courses (id TEXT PRIMARY KEY, slug TEXT NOT NULL UNIQUE, status TEXT NOT NULL DEFAULT 'draft', revision INTEGER NOT NULL DEFAULT 0, content_json TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS course_publications (course_id TEXT PRIMARY KEY, slug TEXT NOT NULL UNIQUE, version INTEGER NOT NULL DEFAULT 1, content_json TEXT NOT NULL, published_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS course_revisions (id TEXT PRIMARY KEY, course_id TEXT NOT NULL, revision INTEGER NOT NULL, status TEXT NOT NULL, content_json TEXT NOT NULL, actor TEXT NOT NULL DEFAULT 'editor', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS idx_courses_status ON courses(status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_course_revisions_course ON course_revisions(course_id, revision DESC);

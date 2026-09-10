@@ -42,6 +42,7 @@ import './audio-lab-transcription.css'
 import './audio-lab-direct-manipulation.css'
 import './audio-lab-shortcuts.css'
 import './admin-media-library.css'
+import './admin-media-inspector.css'
 import './admin-users.css'
 import './public-reading-type-fix.css'
 import './public-type-force.css'
@@ -118,3 +119,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </Router>
   </React.StrictMode>,
 )
+
+import './course.css'

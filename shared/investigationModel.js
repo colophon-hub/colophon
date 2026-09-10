@@ -2,9 +2,11 @@ export const INVESTIGATION_STATUSES = Object.freeze(['developing', 'active', 'pu
 export const INVESTIGATION_PUBLICATION_STATUSES = Object.freeze(['draft', 'published'])
 export const EVIDENCE_STATES = Object.freeze(['DOCUMENTED', 'INFERENCE', 'OPEN'])
 export const RECORDS_REQUEST_STATUSES = Object.freeze([
-  'Drafting', 'Filed', 'Acknowledged', 'Processing', 'Partial response',
-  'Completed', 'Denied', 'Appealed', 'Litigation / external review',
+  'Researching', 'Drafting', 'Ready to file', 'Filed', 'Acknowledged', 'Processing',
+  'Clarification requested', 'Fee issue', 'Partial response', 'Partial release', 'Records released',
+  'Completed', 'Denied', 'Appealed', 'Litigation / external review', 'Closed',
 ])
+export const RECORDS_DOCUMENT_TYPES = Object.freeze(['acknowledgement','clarification','fee notice','correspondence','denial','appeal','appeal decision','release','responsive record','other'])
 export const RECORDS_REQUEST_TYPES = Object.freeze([
   'FOIA', 'state public-records law', 'municipal records request', 'other',
 ])
@@ -70,11 +72,21 @@ export function normalizeTimelineEvent(event = {}) {
   }
 }
 
+export function normalizeRecordsDocument(document = {}) {
+  return {
+    id: string(document.id) || itemId('record-document'),
+    type: RECORDS_DOCUMENT_TYPES.includes(document.type) ? document.type : 'other',
+    title: string(document.title),
+    date: string(document.date),
+    url: safeHref(document.url || document.attachmentUrl),
+    notes: string(document.notes),
+    public: document.public !== false && document.visibility !== 'private',
+  }
+}
+
 export function normalizeRecordsRequest(request = {}) {
   const status = RECORDS_REQUEST_STATUSES.includes(request.status) ? request.status : 'Drafting'
-  const requestType = RECORDS_REQUEST_TYPES.includes(request.requestType)
-    ? request.requestType
-    : RECORDS_REQUEST_TYPES.includes(request.lawType) ? request.lawType : 'other'
+  const requestType = RECORDS_REQUEST_TYPES.includes(request.requestType) ? request.requestType : RECORDS_REQUEST_TYPES.includes(request.lawType) ? request.lawType : 'other'
   const submittedDate = string(request.submittedDate || request.dateFiled)
   const trackingNumber = string(request.trackingNumber || request.requestNumber)
   const responseDate = string(request.responseDate || request.lastResponseDate)
@@ -82,38 +94,32 @@ export function normalizeRecordsRequest(request = {}) {
   const publicNotes = string(request.publicNotes || request.publicExplanation)
   const sourceIds = array(request.sourceIds || request.responsiveRecordIds).map(string).filter(Boolean)
   const attachmentUrls = array(request.attachmentUrls || request.sourceAttachments).map(safeHref).filter(Boolean)
+  const title = string(request.title || request.internalTitle || request.publicTitle)
   return {
-    id: string(request.id) || itemId('records'),
-    title: string(request.title),
-    agency: string(request.agency),
-    jurisdiction: string(request.jurisdiction),
-    requestType,
-    lawName: string(request.lawName),
-    requestMethod: string(request.requestMethod || request.method),
-    requestUrl: safeHref(request.requestUrl || request.url),
-    description: string(request.description),
-    submittedDate,
-    trackingNumber,
-    status,
-    statutoryDueDate: string(request.statutoryDueDate),
-    followUpDate: string(request.followUpDate),
-    responseDate,
-    feeStatus: string(request.feeStatus),
-    appealStatus: string(request.appealStatus),
-    expectedNextStep: string(request.expectedNextStep),
-    responsiveDocuments: string(request.responsiveDocuments),
-    exemptionsRedactions: string(request.exemptionsRedactions),
-    publicNotes,
-    internalNotes,
-    sourceIds,
-    attachmentUrls,
-    // Legacy aliases remain serialized so older exports and clients keep round-tripping.
-    dateFiled: submittedDate,
-    requestNumber: trackingNumber,
-    lastResponseDate: responseDate,
-    notes: internalNotes,
-    publicExplanation: publicNotes,
+    id: string(request.id) || itemId('records'), title, internalTitle: string(request.internalTitle || title), publicTitle: string(request.publicTitle || title),
+    agency: string(request.agency), agencyComponent: string(request.agencyComponent || request.component), jurisdiction: string(request.jurisdiction),
+    requestType, lawName: string(request.lawName), requestMethod: string(request.requestMethod || request.method), requestUrl: safeHref(request.requestUrl || request.officialFilingUrl || request.url), officialFilingUrl: safeHref(request.officialFilingUrl || request.requestUrl || request.url),
+    description: string(request.description), whyItMatters: string(request.whyItMatters), recordsSought: string(request.recordsSought || request.description), requestText: string(request.requestText), requestTextPublic: Boolean(request.requestTextPublic),
+    dateRange: string(request.dateRange), preferredFormat: string(request.preferredFormat), feeWaiverLanguage: string(request.feeWaiverLanguage), expeditedProcessingLanguage: string(request.expeditedProcessingLanguage),
+    submittedDate, trackingNumber, status, statutoryDueDate: string(request.statutoryDueDate), followUpDate: string(request.followUpDate), responseDate, feeStatus: string(request.feeStatus), appealStatus: string(request.appealStatus), expectedNextStep: string(request.expectedNextStep), responsiveDocuments: string(request.responsiveDocuments), exemptionsRedactions: string(request.exemptionsRedactions), publicNotes, internalNotes, sourceIds, attachmentUrls,
+    documents: array(request.documents).map(normalizeRecordsDocument), public: request.public !== false && request.visibility !== 'private', order: Number.isFinite(Number(request.order)) ? Number(request.order) : 0,
+    dateFiled: submittedDate, requestNumber: trackingNumber, lastResponseDate: responseDate, notes: internalNotes, publicExplanation: publicNotes,
   }
+}
+
+export function publicRecordsRequest(request = {}) {
+  const item = normalizeRecordsRequest(request)
+  if (!item.public) return null
+  const { internalTitle, internalNotes, notes, feeWaiverLanguage, expeditedProcessingLanguage, ...safe } = item
+  safe.title = item.publicTitle || item.title
+  safe.requestText = item.requestTextPublic ? item.requestText : ''
+  safe.documents = item.documents.filter((document) => document.public)
+  return safe
+}
+
+export function publicInvestigation(input = {}) {
+  const item = normalizeInvestigation(input)
+  return { ...item, recordsRequests: item.recordsRequests.map(publicRecordsRequest).filter(Boolean) }
 }
 
 export function normalizeInvestigationRelation(relation = {}) {

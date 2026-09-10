@@ -2,7 +2,7 @@
 
 Colophon is free, self-hostable publishing software for independent publications, editorial collectives, archives, podcasts, campaigns, and print work.
 
-It brings articles, projects, media, feeds, podcasts, campaigns, translations, print layouts, basic audio work, analytics, users, and site settings into one publishing workspace. Publication identity and public branding are configuration, not hard-coded project content.
+It brings articles, projects, media, feeds, podcasts, campaigns, optional self-paced courses, translations, print layouts, basic audio work, analytics, users, and site settings into one publishing workspace. Publication identity and public branding are configuration, not hard-coded project content.
 
 ## Ways to use Colophon
 
@@ -27,6 +27,16 @@ See `docs/INSTALL.md`.
 ## Publishing modules
 
 A publication can expose only the tools it needs. First-run presets include Simple Blog, Media Publication, Everything, and Custom. Individual modules can be enabled or disabled later in settings.
+
+## Extended modules and workflows
+
+- Courses: `docs/COURSES.md`
+- Verified campaign signatures: `docs/CAMPAIGN_SIGNATURES.md`
+- Native podcast hosting, migration and distribution: `docs/PODCAST_HOSTING.md`
+- PWA Web Share Target: `docs/WEB_SHARE_TARGET.md`
+- Public Records Desk: `docs/PUBLIC_RECORDS.md`
+- Upload/public-data security: `docs/SECURITY_MEDIA_UPLOADS.md`
+- Upgrade notes: `docs/UPGRADE-0.2.md`
 
 ## Portable publications
 
