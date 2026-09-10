@@ -342,34 +342,34 @@ export function PiecePage({ pieces = [] }) {
   }
 
   return (
-    <main className={`page piece-page${mode === 'experience' ? ' piece-page--experience' : ' piece-page--reading'}${piece.isPreviewSnapshot ? ' piece-page--preview' : ''}`}>
+    <main className={`h-entry page piece-page${mode === 'experience' ? ' piece-page--experience' : ' piece-page--reading'}${piece.isPreviewSnapshot ? ' piece-page--preview' : ''}`}>
       <div className="reading-progress" aria-hidden="true">
         <span style={{ width: `${readingProgress}%` }} />
       </div>
       <PublicationTopbar />
 
       <section className={`piece-article-lead piece-article-lead--${featuredTitleDisplay} piece-article-lead--${titleLengthClass}${heroImage ? ' piece-article-lead--image' : ' piece-article-lead--fallback'}`} aria-label={titleText}>
-        {featuredTitleDisplay === 'hidden' && heroImage ? <h1 className="screen-reader-only">{titleText}</h1> : null}
+        {featuredTitleDisplay === 'hidden' && heroImage ? <h1 className="p-name screen-reader-only">{titleText}</h1> : null}
         {heroImage ? (
           <figure className="piece-article-lead__figure">
             <img className="piece-article-lead__image" src={heroImage} alt={piece.featuredImageAlt || titleText} />
             {featuredTitleDisplay === 'overlay' ? (
               <figcaption className="piece-article-lead__overlay">
-                <h1>{titleText}</h1>
+                <h1 className="p-name">{titleText}</h1>
               </figcaption>
             ) : null}
           </figure>
         ) : (
           <div className="piece-article-lead__fallback">
             <div className="piece-article-lead__eyebrow">{categoryLabel}</div>
-            <h1>{titleText}</h1>
+            <h1 className="p-name">{titleText}</h1>
           </div>
         )}
 
         {heroImage && featuredTitleDisplay === 'below' ? (
           <div className="piece-article-lead__title-below">
             <div className="piece-article-lead__eyebrow">{categoryLabel}</div>
-            <h1>{titleText}</h1>
+            <h1 className="p-name">{titleText}</h1>
           </div>
         ) : null}
 
@@ -409,7 +409,7 @@ export function PiecePage({ pieces = [] }) {
             </section>
           ) : null}
         </aside>
-        <article className="piece-body-wrap piece-body-wrap--public-post">
+        <article className="e-content piece-body-wrap piece-body-wrap--public-post">
           <div className="piece-body__content">
             {bodyNodes.length ? bodyNodes : <p className="post-body__paragraph">{displayExcerpt || ''}</p>}
           </div>
