@@ -1,0 +1,1 @@
+export const colophonTransparentLogoFixed = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='16' fill='%23f6f6f4'/%3E%3Cpath d='M20 20h38v88H20zm50 0h38v88H70z' fill='%231c1e21'/%3E%3Cpath d='M30 30h18v68H30zm50 0h18v68H80z' fill='%23f6f6f4'/%3E%3C/svg%3E"

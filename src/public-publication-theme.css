@@ -1,0 +1,100 @@
+:root {
+  --font-display: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: ui-serif, Georgia, 'Times New Roman', serif;
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --headline-font: var(--font-heading);
+  --body-font: var(--font-body);
+  --accent-font: var(--font-display);
+  --public-bg: var(--bg, #090909);
+  --public-text: var(--text, #ece7dc);
+  --public-text-muted: var(--text-dim, #cbc3b5);
+  --public-link: var(--paper, #ece7dc);
+}
+
+.public-route-shell,
+.publication-topbar,
+.publication-footer {
+  color: var(--public-text);
+}
+
+.public-route-shell {
+  font-family: var(--font-body);
+}
+
+.public-route-shell h1,
+.public-route-shell h2,
+.public-route-shell h3,
+.public-route-shell h4,
+.public-route-shell h5,
+.public-route-shell h6,
+.publication-footer h2,
+.publication-footer h3 {
+  font-family: var(--font-heading);
+}
+
+.publication-topbar,
+.publication-topbar nav,
+.publication-footer nav,
+.public-route-shell button,
+.public-route-shell input,
+.public-route-shell select,
+.public-route-shell textarea {
+  font-family: var(--font-ui);
+}
+
+.publication-topbar__site-name {
+  display: inline-block;
+  max-width: min(78vw, 34rem);
+  overflow-wrap: anywhere;
+  color: var(--public-text);
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 5vw, 4.5rem);
+  font-weight: 700;
+  line-height: 0.95;
+  text-decoration: none;
+}
+
+.publication-topbar--compact .publication-topbar__site-name {
+  font-size: clamp(1.15rem, 2.5vw, 2rem);
+  line-height: 1;
+}
+
+.publication-topbar a,
+.publication-footer a {
+  color: var(--public-link);
+}
+
+.publication-topbar a:hover,
+.publication-topbar a:focus-visible,
+.publication-footer a:hover,
+.publication-footer a:focus-visible {
+  color: var(--public-text);
+}
+
+.publication-topbar__brand-link,
+.publication-topbar__brand-link:visited,
+.publication-topbar__nav a,
+.publication-topbar__nav a:visited {
+  color: var(--public-text);
+}
+
+.wp-public-admin-bar,
+.wp-public-admin-bar a,
+.wp-public-admin-bar button {
+  color: #f0f0f1;
+}
+
+.admin-frame .wp-admin-bar,
+.admin-frame .wp-admin-bar a,
+.admin-frame .wp-admin-bar button,
+.admin-frame .admin-topbar,
+.admin-frame .admin-topbar a,
+.admin-frame .admin-topbar button {
+  color: #f0f0f1;
+}
+
+.admin-frame .wp-admin-bar strong,
+.admin-frame .admin-topbar strong {
+  color: inherit;
+}

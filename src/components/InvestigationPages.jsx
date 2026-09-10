@@ -1,0 +1,78 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { PublicationTopbar } from './PublicationTopbar'
+import { PublicationFooter } from './PublicationFooter'
+import { useAdminAuth } from './AdminAuthContext'
+import { loadInvestigation, loadInvestigations } from '../lib/investigationsApi'
+import { investigationRelationHref } from '../../shared/investigationModel.js'
+import { setDocumentMeta } from '../lib/documentMeta'
+
+export function InvestigationsIndexPage() {
+  const [items, setItems] = useState([])
+  const [state, setState] = useState('loading')
+  const { isAuthenticated } = useAdminAuth()
+  useEffect(() => { let cancelled = false; loadInvestigations().then((next) => { if (!cancelled) { setItems(next); setState('loaded') } }).catch(() => { if (!cancelled) setState('error') }); return () => { cancelled = true } }, [])
+  useEffect(() => { setDocumentMeta({ title: 'Investigations', description: 'Living reporting hubs for evidence, chronology, records requests, and unresolved questions.', canonicalPath: '/investigations' }) }, [])
+  const ordered = useMemo(() => [...items].sort((a, b) => statusWeight(a.status) - statusWeight(b.status) || dateValue(b.updatedAt) - dateValue(a.updatedAt)), [items])
+  return <main className="page investigation-page investigation-directory"><PublicationTopbar />
+    <header className="investigation-hero investigation-directory__hero"><div className="investigation-shell"><p className="investigation-kicker">REPORTING · EVIDENCE · OPEN QUESTIONS</p><h1>Investigations</h1><p className="investigation-deck">Living reporting hubs that keep chronology, sources, public-records work, and unresolved questions visible around a story.</p>{isAuthenticated ? <Link className="investigation-admin-link" to="/wp-admin/investigations">Manage investigations</Link> : null}</div></header>
+    <section className="investigation-shell investigation-directory__body" aria-live="polite">{state === 'loading' ? <p className="investigation-note">Loading investigations…</p> : null}{state === 'error' ? <p className="investigation-note">Investigation listings are temporarily unavailable.</p> : null}{state === 'loaded' && !ordered.length ? <div className="investigation-empty"><h2>No public investigations yet</h2><p>Published investigations will appear here without requiring a code change.</p></div> : null}<div className="investigation-grid">{ordered.map((item) => <article className="investigation-card" key={item.id}>{item.heroImage ? <Link to={`/investigations/${item.slug}`} className="investigation-card__image"><img src={item.heroImage} alt={item.heroAlt || ''} /></Link> : null}<div className="investigation-card__body"><div className="investigation-status-row"><span className={`investigation-status is-${item.status}`}>{statusLabel(item.status)}</span><time dateTime={item.updatedAt}>{formatDate(item.updatedAt, 'Updated')}</time></div><h2><Link to={`/investigations/${item.slug}`}>{item.title}</Link></h2><p>{item.deck || item.summary || 'Open the investigation for reporting, evidence, records requests, and unresolved questions.'}</p><div className="investigation-card__counts"><span>{item.sources.length} sources</span><span>{item.timeline.length} timeline events</span><span>{item.recordsRequests.length} records requests</span></div><Link className="investigation-button" to={`/investigations/${item.slug}`}>Open investigation →</Link></div></article>)}</div></section>
+    <PublicationFooter />
+  </main>
+}
+
+export function InvestigationDetailPage() {
+  const location = useLocation()
+  const slug = decodeURIComponent(location.pathname.replace(/^\/investigations\//, '').replace(/\/+$/, ''))
+  const [item, setItem] = useState(null)
+  const [state, setState] = useState('loading')
+  const { isAuthenticated } = useAdminAuth()
+  useEffect(() => { let cancelled = false; setState('loading'); loadInvestigation(slug).then((next) => { if (cancelled) return; setItem(next); setState('loaded'); setDocumentMeta({ title: next.title, description: next.deck || next.summary || 'Investigation', canonicalPath: `/investigations/${next.slug}` }) }).catch(() => { if (!cancelled) setState('error') }); return () => { cancelled = true } }, [slug])
+  if (state === 'loading') return <main className="page investigation-page"><PublicationTopbar /><div className="investigation-shell investigation-loading">Loading investigation…</div><PublicationFooter /></main>
+  if (state === 'error' || !item) return <main className="page investigation-page"><PublicationTopbar /><div className="investigation-shell investigation-loading"><h1>Investigation unavailable</h1><p>This investigation is not public, does not exist, or its authoritative storage is unavailable.</p><Link to="/investigations">Back to investigations</Link></div><PublicationFooter /></main>
+
+  const reporting = item.relations.filter((relation) => ['post', 'article'].includes(relation.targetType))
+  const campaigns = item.relations.filter((relation) => relation.targetType === 'campaign')
+  const people = item.relations.filter((relation) => relation.targetType === 'person')
+  const institutions = item.relations.filter((relation) => relation.targetType === 'institution')
+  const primaryReporting = reporting[0]
+
+  return <main className="page investigation-page investigation-detail"><PublicationTopbar />
+    <header className="investigation-hero">{item.heroImage ? <div className="investigation-hero__art"><img src={item.heroImage} alt={item.heroAlt || ''} /></div> : null}<div className="investigation-shell investigation-hero__content"><div className="investigation-status-row"><span className={`investigation-status is-${item.status}`}>{statusLabel(item.status)}</span><time dateTime={item.updatedAt}>{formatDate(item.updatedAt, 'Updated')}</time></div><h1>{item.title}</h1>{item.deck ? <p className="investigation-deck">{item.deck}</p> : null}<div className="investigation-hero__actions">{primaryReporting ? <RelationLink relation={primaryReporting} className="investigation-button">Read the main reporting →</RelationLink> : null}{campaigns[0] ? <RelationLink relation={campaigns[0]} className="investigation-button investigation-button--quiet">Related campaign →</RelationLink> : null}{isAuthenticated ? <Link className="investigation-admin-link" to="/wp-admin/investigations">Edit investigation</Link> : null}</div></div></header>
+
+    <div className="investigation-shell investigation-layout"><article className="investigation-main">
+      {item.explainer || item.howToUse ? <InvestigationSection eyebrow="START HERE" title="How to use this page">{item.explainer ? <TextBlock text={item.explainer} /> : null}{item.howToUse ? <TextBlock text={item.howToUse} /> : null}</InvestigationSection> : null}
+      {item.summary ? <InvestigationSection eyebrow="ONE-MINUTE SUMMARY" title="What we know so far"><TextBlock text={item.summary} /></InvestigationSection> : null}
+      {item.question || item.stakes ? <InvestigationSection eyebrow="THE QUESTION" title={item.question || 'What is this investigation trying to establish?'}>{item.stakes ? <TextBlock text={item.stakes} /> : null}</InvestigationSection> : null}
+      {item.decisionTree ? <InvestigationSection eyebrow="DECISION TREE / REPORTING MAP" title="How the reporting fits together"><TextBlock text={item.decisionTree} /></InvestigationSection> : null}
+
+      {item.timeline.length ? <InvestigationSection eyebrow="CHRONOLOGY" title="Timeline"><p className="investigation-note">Chronology is not causation. Events are placed together to show sequence; each claim keeps its own evidence state.</p><ol className="investigation-timeline">{[...item.timeline].sort((a, b) => dateValue(a.date) - dateValue(b.date)).map((event) => <li key={event.id}><div><time dateTime={event.date}>{formatDate(event.date)}</time><EvidenceBadge state={event.evidenceState} /></div><h3>{event.title}</h3>{event.body ? <TextBlock text={event.body} /> : null}{event.relatedClaim ? <p className="investigation-claim"><strong>Claim:</strong> {event.relatedClaim}</p> : null}</li>)}</ol></InvestigationSection> : null}
+
+      {item.sources.length ? <InvestigationSection eyebrow="EVIDENCE" title="Sources and receipts"><div className="investigation-evidence-list">{item.sources.map((source) => <article className="investigation-source" key={source.id}><div className="investigation-source__meta"><EvidenceBadge state={source.evidenceState} /><span>{source.type}</span>{source.date ? <time dateTime={source.date}>{formatDate(source.date)}</time> : null}</div><h3>{source.title || source.publisher || 'Untitled source'}</h3>{source.publisher ? <p className="investigation-source__publisher">{source.publisher}</p> : null}{source.excerpt ? <blockquote>{source.excerpt}</blockquote> : null}{source.notes ? <TextBlock text={source.notes} /> : null}<div className="investigation-source__links">{source.originalUrl ? <a href={source.originalUrl} target="_blank" rel="noreferrer">Original ↗</a> : null}{source.archiveUrl ? <a href={source.archiveUrl} target="_blank" rel="noreferrer">Archived copy ↗</a> : null}{source.attachmentUrl ? <a href={source.attachmentUrl}>Document / media</a> : null}</div></article>)}</div></InvestigationSection> : null}
+
+      {item.openQuestions.length ? <InvestigationSection eyebrow="OPEN" title="Unresolved questions"><ul className="investigation-question-list">{item.openQuestions.map((question) => <li key={question.id}><EvidenceBadge state="OPEN" /> <span>{question.text}</span></li>)}</ul></InvestigationSection> : null}
+
+      {item.recordsRequests.length ? <InvestigationSection eyebrow="PUBLIC RECORDS DESK" title="Records requests"><p className="investigation-note">These entries track records requests and responses. They are not an invitation to file duplicate requests with the same agency.</p><div className="investigation-records-list">{item.recordsRequests.map((request) => <RecordsRequestCard request={request} sources={item.sources} key={request.id} />)}</div></InvestigationSection> : null}
+
+      {item.updateLog.length ? <InvestigationSection eyebrow="UPDATE LOG" title="What changed"><ol className="investigation-update-log">{item.updateLog.map((update) => <li key={update.id}><time dateTime={update.date}>{formatDate(update.date)}</time><div><h3>{update.title}</h3>{update.body ? <TextBlock text={update.body} /> : null}</div></li>)}</ol></InvestigationSection> : null}
+    </article>
+
+    <aside className="investigation-sidebar"><RelationGroup title="Reporting" relations={reporting} empty="No related article has been linked yet." /><RelationGroup title="Related campaigns" relations={campaigns} /><RelationGroup title="People" relations={people} /><RelationGroup title="Institutions" relations={institutions} /></aside></div>
+    <PublicationFooter />
+  </main>
+}
+
+function RecordsRequestCard({ request, sources }) {
+  const relatedSources = (request.sourceIds || []).map((id) => sources.find((source) => source.id === id)).filter(Boolean)
+  return <article className="investigation-record"><div className="investigation-record__status"><span>{request.status}</span>{request.submittedDate ? <time dateTime={request.submittedDate}>{formatDate(request.submittedDate, 'Filed')}</time> : null}</div><h3>{request.title || request.agency || 'Records request'}</h3>{request.requestType ? <p><strong>Request type:</strong> {request.requestType}{request.lawName ? ` · ${request.lawName}` : ''}</p> : null}{request.agency ? <p><strong>Agency:</strong> {request.agency}</p> : null}{request.jurisdiction ? <p><strong>Jurisdiction:</strong> {request.jurisdiction}</p> : null}{request.requestMethod ? <p><strong>Method:</strong> {request.requestMethod}</p> : null}{request.requestUrl ? <p><a href={request.requestUrl} target="_blank" rel="noreferrer">Request portal / filing page ↗</a></p> : null}{request.trackingNumber ? <p><strong>Tracking:</strong> {request.trackingNumber}</p> : null}{request.publicNotes ? <TextBlock text={request.publicNotes} /> : request.description ? <TextBlock text={request.description} /> : null}{request.statutoryDueDate ? <p><strong>Statutory due:</strong> {formatDate(request.statutoryDueDate)}</p> : null}{request.followUpDate ? <p><strong>Follow-up:</strong> {formatDate(request.followUpDate)}</p> : null}{request.responseDate ? <p><strong>Response:</strong> {formatDate(request.responseDate)}</p> : null}{request.feeStatus ? <p><strong>Fees:</strong> {request.feeStatus}</p> : null}{request.expectedNextStep ? <p><strong>Next:</strong> {request.expectedNextStep}</p> : null}{request.exemptionsRedactions ? <p><strong>Exemptions / redactions:</strong> {request.exemptionsRedactions}</p> : null}{request.appealStatus ? <p><strong>Appeal:</strong> {request.appealStatus}</p> : null}{request.responsiveDocuments ? <p><strong>Responsive records:</strong> {request.responsiveDocuments}</p> : null}{relatedSources.length ? <div className="investigation-source__links">{relatedSources.map((source) => <a key={source.id} href={source.attachmentUrl || source.archiveUrl || source.originalUrl || '#'}>{source.title || 'Related source'}</a>)}</div> : null}{(request.attachmentUrls || []).length ? <div className="investigation-source__links">{request.attachmentUrls.map((url, index) => <a key={`${url}-${index}`} href={url}>Attachment {index + 1}</a>)}</div> : null}</article>
+}
+
+function InvestigationSection({ eyebrow, title, children }) { return <section className="investigation-section"><p className="investigation-section__eyebrow">{eyebrow}</p><h2>{title}</h2>{children}</section> }
+function RelationGroup({ title, relations, empty = '' }) { if (!relations.length && !empty) return null; return <section><h2>{title}</h2>{relations.length ? <ul>{relations.map((relation) => <li key={relation.id}><RelationLink relation={relation}>{relation.label || relation.targetId || 'Related item'}{investigationRelationHref(relation) ? ' →' : ''}</RelationLink>{relation.note ? <small>{relation.note}</small> : null}</li>)}</ul> : <p>{empty}</p>}</section> }
+function RelationLink({ relation, children, className = '' }) { const href = investigationRelationHref(relation); if (!href) return <span className={className}>{children}</span>; if (/^https?:\/\//i.test(href)) return <a className={className} href={href} target="_blank" rel="noreferrer">{children}</a>; return <Link className={className} to={href}>{children}</Link> }
+function EvidenceBadge({ state }) { const value = ['DOCUMENTED', 'INFERENCE', 'OPEN'].includes(state) ? state : 'DOCUMENTED'; return <span className={`evidence-badge evidence-badge--${value.toLowerCase()}`}>{value}</span> }
+function TextBlock({ text }) { return <p className="investigation-text-block">{text}</p> }
+function statusWeight(status) { return ({ active: 0, developing: 1, published: 2, archived: 3 })[status] ?? 9 }
+function statusLabel(status) { return ({ developing: 'Developing', active: 'Active', published: 'Published', archived: 'Archived' })[status] || 'Developing' }
+function dateValue(value) { const stamp = new Date(value || 0).getTime(); return Number.isFinite(stamp) ? stamp : 0 }
+function formatDate(value, prefix = '') { const stamp = dateValue(value); if (!stamp) return prefix ? `${prefix} date unavailable` : 'Date unavailable'; const label = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(stamp)); return prefix ? `${prefix} ${label}` : label }

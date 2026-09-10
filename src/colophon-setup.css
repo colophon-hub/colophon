@@ -1,0 +1,358 @@
+.publishing-modules-card,
+.install-readiness-card,
+.desktop-publish-card {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.publishing-modules-card__identity {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .85rem 1rem;
+  padding: 1rem;
+  border: 1px solid var(--admin-border, #d7d7d7);
+  border-radius: .4rem;
+  background: var(--admin-panel, #fff);
+}
+
+.publishing-modules-card__identity label {
+  display: grid;
+  gap: .35rem;
+}
+
+.publishing-modules-card__identity label:nth-child(2) {
+  grid-column: span 2;
+}
+
+.publishing-modules-card__identity input,
+.publishing-modules-card__identity textarea {
+  width: 100%;
+}
+
+.publishing-modules-card__logo-preview {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  min-height: 72px;
+  padding: .7rem;
+  border: 1px solid var(--admin-border, #d7d7d7);
+  border-radius: .4rem;
+  background: #fff;
+}
+
+.publishing-modules-card__logo-preview img {
+  display: block;
+  width: auto;
+  max-width: 220px;
+  height: auto;
+  max-height: 72px;
+  object-fit: contain;
+}
+
+.publishing-modules-card__identity-actions {
+  align-items: center;
+}
+
+.publishing-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.publishing-modules-card__list,
+.desktop-publish-card__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: .75rem;
+}
+
+.publishing-modules-card__item,
+.desktop-publish-card__options article {
+  display: grid;
+  gap: .7rem;
+  align-items: start;
+  border: 1px solid var(--admin-border, #d7d7d7);
+  border-radius: .4rem;
+  padding: .85rem;
+  background: var(--admin-panel, #fff);
+}
+
+.publishing-modules-card__item {
+  grid-template-columns: auto 1fr;
+  cursor: pointer;
+}
+
+.publishing-modules-card__item input {
+  width: auto;
+  min-height: 0;
+  margin-top: .2rem;
+}
+
+.publishing-modules-card__item span {
+  display: grid;
+  gap: .2rem;
+}
+
+.publishing-modules-card__item small,
+.install-readiness-card__row small {
+  line-height: 1.35;
+  opacity: .72;
+}
+
+.desktop-publish-card.is-highlighted {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.desktop-publish-card__options article > strong {
+  font-size: 1.05rem;
+}
+
+.desktop-publish-card__options article > p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.install-readiness-card__list {
+  display: grid;
+  gap: .55rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.install-readiness-card__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: .7rem;
+  align-items: center;
+  padding: .75rem 0;
+  border-top: 1px solid var(--admin-border, #d7d7d7);
+}
+
+.install-readiness-card__row:first-child {
+  border-top: 0;
+}
+
+.install-readiness-card__row > div {
+  display: grid;
+  gap: .15rem;
+}
+
+.install-readiness-card__status {
+  display: grid;
+  place-items: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-weight: 700;
+  opacity: .55;
+}
+
+.install-readiness-card__status.is-ready {
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .publishing-modules-card__identity,
+  .publishing-modules-card__list,
+  .desktop-publish-card__options {
+    grid-template-columns: 1fr;
+  }
+
+  .publishing-modules-card__identity label:nth-child(2) {
+    grid-column: auto;
+  }
+
+  .install-readiness-card__row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .install-readiness-card__row > .button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .review-card__actions {
+    flex-wrap: wrap;
+  }
+
+  .admin-frame__main,
+  .wp-meta-box {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Desktop onboarding is product UI, not a copy of any publication theme. */
+.desktop-welcome {
+  min-height: 100vh;
+  padding: clamp(2rem, 5vw, 4.5rem);
+  background: #f3f5f7;
+  color: #1b2026;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.desktop-welcome *,
+.desktop-welcome button,
+.desktop-welcome input,
+.desktop-welcome textarea,
+.desktop-welcome select,
+.desktop-welcome .button {
+  font-family: inherit;
+  text-shadow: none;
+}
+
+.desktop-welcome__hero {
+  max-width: 920px;
+  margin: 0 auto 2rem;
+}
+
+.desktop-welcome__mark {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid #b8c0c8;
+  border-radius: 12px;
+  background: #fff;
+  color: #1b2026;
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-bottom: 1.25rem;
+}
+
+.desktop-welcome__eyebrow {
+  margin: 0 0 .65rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: .76rem;
+  font-weight: 700;
+  color: #5b6570;
+}
+
+.desktop-welcome h1 {
+  margin: 0;
+  max-width: 850px;
+  font-family: inherit;
+  font-size: clamp(2rem, 4.5vw, 4rem);
+  font-weight: 720;
+  line-height: 1.03;
+  letter-spacing: -.035em;
+  color: #15191e;
+}
+
+.desktop-welcome__hero > p:last-child {
+  max-width: 760px;
+  margin-top: 1rem;
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: #515b65;
+}
+
+.desktop-welcome__steps {
+  max-width: 1080px;
+  margin: 0 auto 2rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .75rem;
+}
+
+.desktop-welcome__steps > div {
+  display: grid;
+  gap: .35rem;
+  padding: 1rem;
+  border: 1px solid #d4d9de;
+  border-radius: 10px;
+  background: #fff;
+  color: #39424c;
+}
+
+.desktop-welcome__steps strong {
+  font-size: 1.25rem;
+  color: #171c21;
+}
+
+.desktop-welcome .wp-meta-box {
+  max-width: 1080px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1.25rem;
+  border: 1px solid #d4d9de;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 34px rgba(22, 27, 32, .07);
+}
+
+.desktop-welcome .wp-screen-header h2,
+.desktop-welcome .publishing-modules-card__item strong {
+  color: #15191e;
+}
+
+.desktop-welcome .description,
+.desktop-welcome small {
+  color: #606a74;
+  opacity: 1;
+}
+
+.desktop-welcome .publishing-modules-card__identity,
+.desktop-welcome .publishing-modules-card__item {
+  border-color: #d8dde2;
+  background: #fff;
+}
+
+.desktop-welcome .button,
+.desktop-welcome button.button {
+  border: 1px solid #aeb7c0 !important;
+  background: #fff !important;
+  color: #20262d !important;
+  box-shadow: none !important;
+}
+
+.desktop-welcome .button:hover,
+.desktop-welcome button.button:hover {
+  border-color: #6b7682 !important;
+  background: #f3f5f7 !important;
+  color: #11161b !important;
+}
+
+.desktop-welcome .button.button--primary,
+.desktop-welcome button.button.button--primary {
+  border-color: #20262d !important;
+  background: #20262d !important;
+  color: #fff !important;
+}
+
+.desktop-welcome input,
+.desktop-welcome textarea,
+.desktop-welcome select {
+  border: 1px solid #aeb7c0;
+  background: #fff;
+  color: #1b2026;
+}
+
+.desktop-welcome .review-card__actions {
+  margin-top: .25rem;
+}
+
+.desktop-welcome__next {
+  max-width: 1080px;
+  margin: 1rem auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  align-items: center;
+}
+
+@media (max-width: 780px) {
+  .desktop-welcome {
+    padding: 1.25rem;
+  }
+
+  .desktop-welcome__steps {
+    grid-template-columns: 1fr 1fr;
+  }
+}
