@@ -1,0 +1,81 @@
+name: Build Desktop Installers
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to attach installers to
+        required: true
+        default: v0.1.5
+
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            os: windows-latest
+            build_args: --win nsis --x64
+
+          - name: Windows ARM64
+            os: windows-11-arm
+            build_args: --win nsis --arm64
+
+          - name: macOS Intel
+            os: macos-15-intel
+            build_args: --mac dmg zip --x64
+
+          - name: macOS Apple Silicon
+            os: macos-15
+            build_args: --mac dmg zip --arm64
+
+          - name: Linux x64
+            os: ubuntu-latest
+            build_args: --linux AppImage deb --x64
+
+          - name: Linux ARM64
+            os: ubuntu-24.04-arm
+            build_args: --linux AppImage deb --arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+
+      - name: Build installer
+        run: npx electron-builder ${{ matrix.build_args }} --publish never
+
+      - name: Upload installer to GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          gh release upload "$RELEASE_TAG" release/* --clobber
