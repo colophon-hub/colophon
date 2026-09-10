@@ -1,4 +1,6 @@
-const BROWSER_LOCAL_ENV = String(import.meta.env?.VITE_colophon_RUNTIME || '').toLowerCase() === 'browser-local'
+const BROWSER_LOCAL_ENV =
+  String(import.meta.env?.MODE || '').toLowerCase() === 'browser-local' ||
+  String(import.meta.env?.VITE_colophon_RUNTIME || '').toLowerCase() === 'browser-local'
 
 export const RUNTIME_MODES = Object.freeze({
   BROWSER_LOCAL: 'browser-local',
