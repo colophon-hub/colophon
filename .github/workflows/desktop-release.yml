@@ -40,12 +40,12 @@ jobs:
 
           - name: Linux x64
             os: ubuntu-latest
-            build_args: --linux AppImage deb --x64
-
+            build_args: --linux AppImage --x64
+          
           - name: Linux ARM64
             os: ubuntu-24.04-arm
-            build_args: --linux AppImage deb --arm64
-
+            build_args: --linux AppImage --arm64
+  
     runs-on: ${{ matrix.os }}
 
     steps:
