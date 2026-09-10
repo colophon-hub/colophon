@@ -38,7 +38,7 @@ export function DesktopWelcomePage() {
   return (
     <main className="desktop-welcome">
       <section className="desktop-welcome__hero">
-        <div className="desktop-welcome__mark" aria-hidden="true">S*</div>
+        <div className="desktop-welcome__mark" aria-hidden="true">C*</div>
         <p className="desktop-welcome__eyebrow">free publishing software</p>
         <h1>Build the publication first. Put it online when you’re ready.</h1>
         <p>{browserLocal ? 'Start in this browser without an account, domain, download, or paid hosting. Your work stays on this device until you explicitly export or publish it.' : 'Colophon works on this computer without a domain, paid hosting, GitHub, or a terminal. Choose what kind of publication you want and we’ll keep the rest of the interface out of your way.'}</p>
