@@ -1,0 +1,159 @@
+/*
+ * Final admin dark-mode compatibility layer.
+ *
+ * This file intentionally loads after the older admin/module styles so legacy
+ * hard-coded light surfaces cannot override the selected interface theme.
+ */
+
+html[data-ui-theme="dark"] .admin-frame,
+html[data-ui-theme="dark"] .admin-frame__main {
+  background: #090b0d !important;
+  color: #f0f3f5 !important;
+}
+
+html[data-ui-theme="dark"] .admin-frame__main {
+  min-height: calc(100vh - 32px);
+}
+
+html[data-ui-theme="dark"] :where(
+  .wp-admin-screen,
+  .campaign-admin-page,
+  .investigation-admin
+) {
+  background: #090b0d !important;
+  color: #f0f3f5 !important;
+}
+
+/* Native editor: remove the remaining white Publish/action strips. */
+html[data-ui-theme="dark"] .native-bridge-sidebar,
+html[data-ui-theme="dark"] .native-bridge-sidebar .wp-meta-box,
+html[data-ui-theme="dark"] .native-bridge-sidebar .wp-meta-box > h2,
+html[data-ui-theme="dark"] .native-content-editor__actions {
+  background: #15191d !important;
+  color: #f0f3f5 !important;
+  border-color: #46525c !important;
+}
+
+html[data-ui-theme="dark"] .native-bridge-sidebar .wp-meta-box > h2 {
+  color: #f0f3f5 !important;
+}
+
+html[data-ui-theme="dark"] .native-content-editor__actions .button {
+  background: #222a30 !important;
+  color: #f0f3f5 !important;
+  border-color: #53616c !important;
+}
+
+html[data-ui-theme="dark"] .native-content-editor__actions .button--primary {
+  background: #2d78b7 !important;
+  color: #fff !important;
+  border-color: #5da2d9 !important;
+}
+
+/* Investigations used Canvas/transparent surfaces and inherited a light parent. */
+html[data-ui-theme="dark"] .investigation-admin {
+  min-height: calc(100vh - 32px);
+  background: #090b0d !important;
+  color: #f0f3f5 !important;
+}
+
+html[data-ui-theme="dark"] .investigation-admin :where(
+  h1, h2, h3, h4, p, strong, span, label, legend
+) {
+  color: inherit;
+}
+
+html[data-ui-theme="dark"] .investigation-admin__eyebrow,
+html[data-ui-theme="dark"] .investigation-admin__header p,
+html[data-ui-theme="dark"] .investigation-admin__list span,
+html[data-ui-theme="dark"] .investigation-admin__savebar span,
+html[data-ui-theme="dark"] .investigation-admin__empty p {
+  color: #b9c3ca !important;
+}
+
+html[data-ui-theme="dark"] :where(
+  .investigation-admin__section,
+  .investigation-admin__row,
+  .investigation-admin__list button,
+  .investigation-admin__savebar,
+  .investigation-admin__empty
+) {
+  background: #15191d !important;
+  color: #f0f3f5 !important;
+  border-color: #46525c !important;
+}
+
+html[data-ui-theme="dark"] .investigation-admin :where(
+  button,
+  input,
+  select,
+  textarea
+) {
+  border-color: #53616c !important;
+}
+
+html[data-ui-theme="dark"] .investigation-admin :where(button) {
+  background: #222a30 !important;
+  color: #f0f3f5 !important;
+}
+
+html[data-ui-theme="dark"] .investigation-admin :where(
+  input,
+  select,
+  textarea
+) {
+  background: #0f1316 !important;
+  color: #f0f3f5 !important;
+}
+
+/* Campaign editor: keep the full workspace dark, not only its inner cards. */
+html[data-ui-theme="dark"] .campaign-admin-page,
+html[data-ui-theme="dark"] .campaign-admin-workspace {
+  background: #090b0d !important;
+  color: #f0f3f5 !important;
+}
+
+html[data-ui-theme="dark"] .campaign-admin-page :where(
+  h1, h2, h3, h4, p, strong, label
+) {
+  color: inherit;
+}
+
+/* Active rail entries were occasionally blue-on-blue after the generic link rule. */
+html[data-ui-theme="dark"] .admin-rail__sublink.is-active,
+html[data-ui-theme="dark"] .admin-rail__link.is-active,
+html[data-ui-theme="dark"] .admin-rail__group.is-active > .admin-rail__group-toggle {
+  color: #fff !important;
+}
+
+html[data-ui-theme="dark"] .admin-rail__sublink.is-active * {
+  color: #fff !important;
+}
+
+/* A few legacy admin surfaces still declare white directly. */
+html[data-ui-theme="dark"] .admin-frame :where(
+  .wp-meta-box,
+  .newsroom-panel,
+  .wp-dashboard-section,
+  .review-summary-card
+) {
+  background-color: #15191d !important;
+  color: #f0f3f5 !important;
+  border-color: #38434c !important;
+}
+
+html[data-ui-theme="dark"] .admin-frame :where(
+  .wp-meta-box,
+  .newsroom-panel,
+  .wp-dashboard-section,
+  .review-summary-card
+) :where(h1, h2, h3, h4, strong, label) {
+  color: #f0f3f5 !important;
+}
+
+html[data-ui-theme="dark"] .admin-frame :where(
+  .description,
+  small
+) {
+  color: #b9c3ca !important;
+}

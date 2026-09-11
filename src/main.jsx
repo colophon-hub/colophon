@@ -126,3 +126,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 )
 
 import './course.css'
+import './admin-dark-mode-fixes.css'
