@@ -76,6 +76,11 @@ async function handleNativeContent(url, input, init) {
   if (method === 'POST' || method === 'PUT') {
     const body = await readJsonBody(input, init)
     const incoming = body.item || body.entry || body
+    const expectedUpdatedAt = String(body.expectedUpdatedAt || '')
+    const existing = incoming?.id ? await localGet(`native:${incoming.id}`) : null
+    if (existing && expectedUpdatedAt && String(existing.updatedAt || '') !== expectedUpdatedAt) {
+      return json({ ok: false, conflict: true, error: 'This content changed since you opened it. Reload the latest version before saving over it.', current: existing }, 409)
+    }
     const now = new Date().toISOString()
     const item = {
       ...incoming,

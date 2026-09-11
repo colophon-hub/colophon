@@ -14,6 +14,7 @@ export function PublicationFooter() {
   const projects = getFeaturedPublicProjects()
   const config = useResolvedConfig()
   const identity = config?.identity || {}
+  const indieweb = config?.indieweb || {}
   const publicationName = String(identity.publicationName || 'Independent Publication').trim() || 'Independent Publication'
   const footerIdentity = String(identity.footerIdentity || publicationName).trim() || publicationName
   const footerText = String(identity.footerText || '').trim()
@@ -21,11 +22,12 @@ export function PublicationFooter() {
   return (
     <footer className="publication-footer">
       <div className="publication-footer__top">
-        <div className="publication-footer__brand">
+        <div className="publication-footer__brand h-card">
           <EditableText as="div" className="publication-footer__eyebrow" field={footer.eyebrow.field}>
             {footer.eyebrow.defaultText}
           </EditableText>
-          <h2>{footerIdentity}</h2>
+          {identity.logoUrl ? <img className="u-photo indieweb-meta" src={identity.logoUrl} alt="" /> : null}
+          {identity.siteUrl ? <a className="u-url" href={identity.siteUrl}><h2 className="p-name">{footerIdentity}</h2></a> : <h2 className="p-name">{footerIdentity}</h2>}
           {footerText ? (
             <div className="publication-footer__body">{footerText}</div>
           ) : (
@@ -71,6 +73,7 @@ export function PublicationFooter() {
 
       <div className="publication-footer__bottom">
         <div className="publication-footer__software">{publicationName} · Powered by Colophon</div>
+        {(indieweb.relMe || []).length ? <div className="publication-footer__identity-links" aria-label="Verified identity links">{indieweb.relMe.map((href) => <a key={href} href={href} rel="me noopener noreferrer">{(() => { try { return new URL(href).hostname } catch { return href } })()}</a>)}</div> : null}
         <EditableText as="div" field={footer.bottom.field} multiline>
           {footer.bottom.defaultText}
         </EditableText>

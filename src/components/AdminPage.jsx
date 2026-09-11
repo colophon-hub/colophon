@@ -9,6 +9,8 @@ import { adminRoutes } from '../routing/routes'
 import { AdminFrame } from './AdminRail'
 import { PublishingModulesCard } from './PublishingModulesCard'
 import { WpAnalyticsWidgets } from './WpAnalyticsWidgets'
+import { AccountSecurityCard } from './AccountSecurityCard'
+import { AppearanceSettingsCard } from './AppearanceSettingsCard'
 
 function byNewest(field = 'updatedAt') {
   return (a, b) => new Date(b?.[field] || b?.publishedAt || 0) - new Date(a?.[field] || a?.publishedAt || 0)
@@ -138,6 +140,11 @@ export function AdminPage({ pieces = [] }) {
         </div>
 
         {!setupComplete ? <PublishingModulesCard onboarding onComplete={() => setSetupComplete(true)} /> : null}
+
+        <div className="newsroom-preferences-grid">
+          <AppearanceSettingsCard />
+          <AccountSecurityCard />
+        </div>
 
         <section className="newsroom-stat-grid">
           <article className="review-summary-card"><div className="review-summary-card__eyebrow">drafts</div><strong>{recentDrafts.length}</strong><span>active draft queue</span></article>

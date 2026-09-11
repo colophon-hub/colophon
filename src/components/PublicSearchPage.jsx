@@ -156,12 +156,12 @@ function ArchiveCard({ item, query = '', readLabel = 'Read', printLabel = 'Print
   const hasImage = item.imageUrl && !hideImage
 
   return (
-    <article className="archive-card">
-      <Link className="archive-card__media" to={item.href} aria-label={item.title}>
+    <article className="h-entry archive-card">
+      <Link className="u-url archive-card__media" to={item.href} aria-label={item.title}>
         {hasImage ? (
           <div className="archive-card__image">
             <img
-              className="archive-card__image-el"
+              className="u-featured u-photo archive-card__image-el"
               src={item.imageUrl}
               alt=""
               loading="lazy"
@@ -172,8 +172,8 @@ function ArchiveCard({ item, query = '', readLabel = 'Read', printLabel = 'Print
           <div className="archive-card__image archive-card__image--fallback" aria-hidden="true" />
         )}
         <div className="archive-card__overlay">
-          <span className="archive-card__project-kicker">{item.project}</span>
-          <h3 className="archive-card__title"><HighlightText text={item.title} query={query} /></h3>
+          <span className="p-category archive-card__project-kicker">{item.project}</span>
+          <h3 className="p-name archive-card__title"><HighlightText text={item.title} query={query} /></h3>
         </div>
       </Link>
 
@@ -184,11 +184,11 @@ function ArchiveCard({ item, query = '', readLabel = 'Read', printLabel = 'Print
           </Link>
           <span aria-hidden="true">·</span>
           <span>{item.format}</span>
-          {item.publishedDateLabel ? <><span aria-hidden="true">·</span><span>{item.publishedDateLabel}</span></> : null}
+          {item.publishedDateLabel ? <><span aria-hidden="true">·</span><time className="dt-published" dateTime={item.publishedAt || undefined}>{item.publishedDateLabel}</time></> : null}
         </div>
 
         {item.excerpt ? (
-          <p className="archive-card__excerpt"><HighlightText text={item.excerpt} query={query} /></p>
+          <p className="p-summary archive-card__excerpt"><HighlightText text={item.excerpt} query={query} /></p>
         ) : null}
 
         <div className="archive-card__actions">
@@ -391,7 +391,7 @@ export function PublicSearchPage({ pieces = [] }) {
       : `${normalized.length} pieces across ${projectOptions.length} projects`
 
   return (
-    <main className="page public-search-page archive-page">
+    <main className="h-feed page public-search-page archive-page">
       <PublicationTopbar />
 
       <section className="project-hero archive-page__hero">

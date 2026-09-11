@@ -2,80 +2,18 @@ import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from './AdminAuthContext'
 import { isLocalRuntime, runtimeLabel } from '../lib/runtime'
+import { passkeysSupported } from '../lib/webauthnClient'
 import mastheadLogo from '../assets/colophon-masthead.svg'
 
-function getReturnTo(search = '') {
-  const params = new URLSearchParams(search)
-  const value = params.get('returnTo') || params.get('next') || '/wp-admin'
-  if (!value.startsWith('/') || value.startsWith('//')) return '/wp-admin'
-  return value
-}
-
+function getReturnTo(search = '') { const params = new URLSearchParams(search); const value = params.get('returnTo') || params.get('next') || '/wp-admin'; return !value.startsWith('/') || value.startsWith('//') ? '/wp-admin' : value }
 export function LoginPage() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { isAuthenticated, isChecking, login, authError, session } = useAdminAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [token, setToken] = useState('')
-  const [submitError, setSubmitError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const returnTo = useMemo(() => getReturnTo(location.search), [location.search])
-  const localRuntime = isLocalRuntime()
-
-  async function submitUser(event) {
-    event.preventDefault()
-    setSubmitError('')
-    if (!email.trim() || !password) { setSubmitError('Email and password are required.'); return }
-    setIsSubmitting(true)
-    const ok = await login({ email, password })
-    setIsSubmitting(false)
-    if (ok) navigate(returnTo, { replace: true })
-  }
-
-  async function submitBootstrap(event) {
-    event.preventDefault()
-    setSubmitError('')
-    if (!token.trim()) { setSubmitError('Emergency admin token is required.'); return }
-    setIsSubmitting(true)
-    const ok = await login({ token })
-    setIsSubmitting(false)
-    if (ok) navigate(returnTo, { replace: true })
-  }
-
-  if (localRuntime) {
-    return <main className="page admin-login-page"><section className="admin-login-panel" aria-labelledby="admin-login-title">
-      <img className="admin-login-panel__logo" src={mastheadLogo} alt="Colophon" />
-      <h1 id="admin-login-title">No sign in needed</h1>
-      <p>{runtimeLabel()}. This local edition does not use a Colophon account.</p>
-      <div className="admin-login-panel__actions"><Link className="button button--primary" to={returnTo}>Continue to newsroom</Link><Link className="button" to="/">Preview site</Link></div>
-    </section></main>
-  }
-
-  return (
-    <main className="page admin-login-page">
-      <section className="admin-login-panel" aria-labelledby="admin-login-title">
-        <img className="admin-login-panel__logo" src={mastheadLogo} alt="Colophon" />
-        {isAuthenticated ? (
-          <>
-            <h1 id="admin-login-title">You are logged in</h1>
-            <p>{session?.user?.email ? `${session.user.email} · ${session.role}` : `Emergency owner session · ${session?.role || 'owner'}`}</p>
-            <div className="admin-login-panel__actions"><Link className="button button--primary" to={returnTo}>Continue</Link><Link className="button" to="/wp-admin">Dashboard</Link><Link className="button" to="/logout">Logout</Link></div>
-          </>
-        ) : (
-          <>
-            <h1 id="admin-login-title">Colophon sign in</h1>
-            <p>Use your individual account. Access is tied to your user identity and enforced role.</p>
-            <form onSubmit={submitUser} className="admin-login-account-form">
-              <label><span>Email</span><input autoComplete="username" autoFocus type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-              <label><span>Password</span><input autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
-              {submitError || authError ? <p className="admin-login-panel__error">{submitError || authError}</p> : null}
-              <button className="button button--primary" type="submit" disabled={isSubmitting || isChecking}>{isSubmitting || isChecking ? 'Checking…' : 'Sign in'}</button>
-            </form>
-            <details className="admin-login-bootstrap"><summary>Emergency / bootstrap admin token</summary><p className="description">Use this only to recover access or provision the first Owner account. It remains an Owner-level escape hatch and should not be shared for everyday login.</p><form onSubmit={submitBootstrap}><label><span>Admin token</span><input autoComplete="off" type="password" value={token} onChange={(event) => setToken(event.target.value)} /></label><button className="button" type="submit" disabled={isSubmitting || isChecking}>Use emergency token</button></form></details>
-          </>
-        )}
-      </section>
-    </main>
-  )
+  const location = useLocation(); const navigate = useNavigate(); const { isAuthenticated, isChecking, login, completeSecondFactor, passkeyLogin, authError, session, secondFactorChallenge } = useAdminAuth(); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [token, setToken] = useState(''); const [factorCode, setFactorCode] = useState(''); const [submitError, setSubmitError] = useState(''); const [isSubmitting, setIsSubmitting] = useState(false); const returnTo = useMemo(() => getReturnTo(location.search), [location.search]); const localRuntime = isLocalRuntime()
+  async function submitUser(event) { event.preventDefault(); setSubmitError(''); if (!email.trim() || !password) { setSubmitError('Email and password are required.'); return } setIsSubmitting(true); const ok = await login({ email, password }); setIsSubmitting(false); if (ok) navigate(returnTo, { replace: true }) }
+  async function submitFactor(event) { event.preventDefault(); setSubmitError(''); if (!factorCode.trim()) { setSubmitError('Enter an authenticator or recovery code.'); return } setIsSubmitting(true); const ok = await completeSecondFactor(factorCode); setIsSubmitting(false); if (ok) navigate(returnTo, { replace: true }) }
+  async function submitPasskey() { setSubmitError(''); if (!email.trim()) { setSubmitError('Enter your account email first.'); return } setIsSubmitting(true); const ok = await passkeyLogin(email); setIsSubmitting(false); if (ok) navigate(returnTo, { replace: true }) }
+  async function submitBootstrap(event) { event.preventDefault(); setSubmitError(''); if (!token.trim()) { setSubmitError('Emergency admin token is required.'); return } setIsSubmitting(true); const ok = await login({ token }); setIsSubmitting(false); if (ok) navigate(returnTo, { replace: true }) }
+  if (localRuntime) return <main className="page admin-login-page"><section className="admin-login-panel" aria-labelledby="admin-login-title"><img className="admin-login-panel__logo" src={mastheadLogo} alt="Colophon" /><h1 id="admin-login-title">No sign in needed</h1><p>{runtimeLabel()}. This local edition does not use a Colophon account.</p><div className="admin-login-panel__actions"><Link className="button button--primary" to={returnTo}>Continue to newsroom</Link><Link className="button" to="/">Preview site</Link></div></section></main>
+  return <main className="page admin-login-page"><section className="admin-login-panel" aria-labelledby="admin-login-title"><img className="admin-login-panel__logo" src={mastheadLogo} alt="Colophon" />
+    {isAuthenticated ? <><h1 id="admin-login-title">You are logged in</h1><p>{session?.user?.email ? `${session.user.email} · ${session.role}` : `Emergency owner session · ${session?.role || 'owner'}`}</p><div className="admin-login-panel__actions"><Link className="button button--primary" to={returnTo}>Continue</Link><Link className="button" to="/wp-admin">Dashboard</Link><Link className="button" to="/logout">Logout</Link></div></> : secondFactorChallenge ? <><h1 id="admin-login-title">Verify sign in</h1><p>Enter the current six-digit authenticator code, or one unused recovery code.</p><form onSubmit={submitFactor} className="admin-login-account-form"><label><span>Authenticator or recovery code</span><input autoFocus autoComplete="one-time-code" value={factorCode} onChange={(event) => setFactorCode(event.target.value)} /></label>{submitError || authError ? <p className="admin-login-panel__error" role="alert">{submitError || authError}</p> : null}<button className="button button--primary" type="submit" disabled={isSubmitting || isChecking}>{isSubmitting || isChecking ? 'Checking…' : 'Verify'}</button></form></> : <><h1 id="admin-login-title">Colophon sign in</h1><p>Use your individual account. Access is tied to your user identity and enforced role.</p><form onSubmit={submitUser} className="admin-login-account-form"><label><span>Email</span><input autoComplete="username" autoFocus type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><label><span>Password</span><input autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>{submitError || authError ? <p className="admin-login-panel__error" role="alert">{submitError || authError}</p> : null}<button className="button button--primary" type="submit" disabled={isSubmitting || isChecking}>{isSubmitting || isChecking ? 'Checking…' : 'Sign in'}</button></form>{passkeysSupported() ? <div className="admin-login-panel__actions"><button className="button" type="button" disabled={isSubmitting || isChecking} onClick={submitPasskey}>Sign in with passkey</button></div> : null}<details className="admin-login-bootstrap"><summary>Emergency / bootstrap admin token</summary><p className="description">Use this only to recover access or provision the first Owner account.</p><form onSubmit={submitBootstrap}><label><span>Admin token</span><input autoComplete="off" type="password" value={token} onChange={(event) => setToken(event.target.value)} /></label><button className="button" type="submit" disabled={isSubmitting || isChecking}>Use emergency token</button></form></details></>}
+  </section></main>
 }

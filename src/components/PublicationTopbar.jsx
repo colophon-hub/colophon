@@ -9,6 +9,7 @@ import {
 } from '../lib/publishingModules'
 import { resolveVisibleNavigation } from '../../shared/publicNavigationModel.js'
 import { PublicTypographyRuntime } from './PublicTypographyRuntime'
+import { applyExtensionFiltersSync } from '../../shared/extensionHooks.js'
 
 function PublicNavLink({ item }) {
   if (item.href.startsWith('/')) return <Link to={item.href}>{item.label}</Link>
@@ -36,7 +37,7 @@ export function PublicationTopbar() {
     return () => window.removeEventListener(eventName, refresh)
   }, [])
 
-  const navItems = resolveVisibleNavigation(resolvedConfig?.navigation, modulePrefs?.modules || [])
+  const navItems = applyExtensionFiltersSync('publicNavigation', resolveVisibleNavigation(resolvedConfig?.navigation, modulePrefs?.modules || []), { pathname: location.pathname })
 
   return (
     <header className={`publication-topbar publication-topbar--masthead publication-topbar--${resolvedMastheadSize}${isHome ? ' publication-topbar--home' : ' publication-topbar--inner'}`}>

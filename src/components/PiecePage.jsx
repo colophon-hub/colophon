@@ -17,6 +17,8 @@ import { loadCollectionsAsync } from '../lib/collections'
 import { loadPublicationsAsync } from '../lib/publications'
 import { EditableText } from './EditableText'
 import { EditableLink } from './EditableLink'
+import { WebmentionsPanel } from './WebmentionsPanel'
+import { useResolvedConfig } from '../lib/useResolvedConfig'
 import {
   estimateReadingTimeFromHtml,
   extractArticleEnhancements,
@@ -166,6 +168,7 @@ export function PiecePage({ pieces = [] }) {
   const [collections, setCollections] = useState([])
   const [publications, setPublications] = useState([])
   const [readingProgress, setReadingProgress] = useState(0)
+  const resolvedConfig = useResolvedConfig()
 
   useEffect(() => {
     let cancelled = false
@@ -266,6 +269,10 @@ export function PiecePage({ pieces = [] }) {
     [piece?.bodyHtml, renderData, mode]
   )
   const articleHtml = renderData?.bodyHtml || piece?.bodyHtml || piece?.body || ''
+  const indieIdentity = resolvedConfig?.indieweb || {}
+  const canonicalPostUrl = piece?.slug && typeof window !== 'undefined' ? `${window.location.origin}/post/${encodeURIComponent(piece.slug)}` : ''
+  const indieAuthorName = String(piece?.author || indieIdentity.authorName || '').trim()
+  const indieAuthorUrl = String(indieIdentity.authorUrl || resolvedConfig?.identity?.siteUrl || '').trim()
   const readingTime = useMemo(() => estimateReadingTimeFromHtml(articleHtml, piece?.excerpt || ''), [articleHtml, piece?.excerpt])
   const enhancements = useMemo(() => extractArticleEnhancements(articleHtml), [articleHtml])
   const podcastAudioUrl = useMemo(() => getPodcastAudioUrl(piece || {}), [piece])
@@ -348,11 +355,21 @@ export function PiecePage({ pieces = [] }) {
       </div>
       <PublicationTopbar />
 
+      {!piece.isPreviewSnapshot ? (
+        <div className="indieweb-meta" aria-hidden="true">
+          <a className="u-url" href={canonicalPostUrl}>Permalink</a>
+          {piece.publishedAt ? <time className="dt-published" dateTime={piece.publishedAt}>{piece.publishedAt}</time> : null}
+          {piece.updatedAt ? <time className="dt-updated" dateTime={piece.updatedAt}>{piece.updatedAt}</time> : null}
+          {indieAuthorName ? <span className="p-author h-card">{indieAuthorUrl ? <a className="p-name u-url" href={indieAuthorUrl}>{indieAuthorName}</a> : <span className="p-name">{indieAuthorName}</span>}{indieIdentity.authorPhotoUrl ? <img className="u-photo" src={indieIdentity.authorPhotoUrl} alt="" /> : null}</span> : null}
+          {[...(piece.categories || []), ...(piece.tags || [])].filter(Boolean).map((term) => <span className="p-category" key={term}>{term}</span>)}
+        </div>
+      ) : null}
+
       <section className={`piece-article-lead piece-article-lead--${featuredTitleDisplay} piece-article-lead--${titleLengthClass}${heroImage ? ' piece-article-lead--image' : ' piece-article-lead--fallback'}`} aria-label={titleText}>
         {featuredTitleDisplay === 'hidden' && heroImage ? <h1 className="p-name screen-reader-only">{titleText}</h1> : null}
         {heroImage ? (
           <figure className="piece-article-lead__figure">
-            <img className="piece-article-lead__image" src={heroImage} alt={piece.featuredImageAlt || titleText} />
+            <img className="u-featured u-photo piece-article-lead__image" src={heroImage} alt={piece.featuredImageAlt || titleText} />
             {featuredTitleDisplay === 'overlay' ? (
               <figcaption className="piece-article-lead__overlay">
                 <h1 className="p-name">{titleText}</h1>
@@ -423,6 +440,8 @@ export function PiecePage({ pieces = [] }) {
         relatedCollections={relatedCollections}
         relatedPublications={relatedPublications}
       />
+
+      {!piece.isPreviewSnapshot ? <WebmentionsPanel slug={piece.slug} /> : null}
 
       <section className="piece-nav">
         <div className="piece-nav-grid">

@@ -1,0 +1,195 @@
+:root[data-ui-theme="light"] { --bg:#f4f5f7; --bg-soft:#fff; --panel:#fff; --panel-border:rgba(20,26,31,.18); --text:#181c20; --text-dim:#4d5964; --paper:#fff; --paper-ink:#181c20; color-scheme:light; }
+:root[data-ui-theme="dark"] { --bg:#090b0d; --bg-soft:#111418; --panel:#15191d; --panel-border:rgba(236,241,245,.2); --text:#f0f3f5; --text-dim:#bec8d0; --paper:#15191d; --paper-ink:#f0f3f5; color-scheme:dark; }
+html,body,#root { background:var(--bg); color:var(--text); }
+:root[data-ui-theme="dark"] input,:root[data-ui-theme="dark"] select,:root[data-ui-theme="dark"] textarea,:root[data-ui-theme="dark"] [contenteditable="true"] { background:#0f1316!important; color:#f0f3f5!important; border-color:#44505a!important; }
+:root[data-ui-theme="dark"] .wp-meta-box,:root[data-ui-theme="dark"] .review-summary-card,:root[data-ui-theme="dark"] .review-card,:root[data-ui-theme="dark"] .admin-login-panel,:root[data-ui-theme="dark"] .admin-public-config-card,:root[data-ui-theme="dark"] .public-reading-card,:root[data-ui-theme="dark"] .media-library-card,:root[data-ui-theme="dark"] .campaign-admin-card,:root[data-ui-theme="dark"] .native-bridge-main,:root[data-ui-theme="dark"] .native-bridge-sidebar { background:#15191d!important; color:#f0f3f5!important; border-color:#38434c!important; }
+:root[data-ui-theme="dark"] .description,:root[data-ui-theme="dark"] small,:root[data-ui-theme="dark"] .wp-row-actions { color:#b9c3ca!important; }
+:root[data-ui-theme="dark"] a { color:#8dc8ff; }
+:root[data-ui-theme="dark"] .button { background:#222a30; color:#f3f6f8; border-color:#53616c; }
+:root[data-ui-theme="dark"] .button--primary { background:#2d78b7; color:#fff; border-color:#5da2d9; }
+:focus-visible { outline:3px solid #2f8fe0; outline-offset:2px; }
+.colophon-code-block { position:relative; margin:1.5rem 0; border:1px solid color-mix(in srgb,var(--text) 18%,transparent); border-radius:8px; overflow:hidden; background:var(--bg-soft); }
+.colophon-code-block__tools { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:.45rem .7rem; border-bottom:1px solid color-mix(in srgb,var(--text) 14%,transparent); font:600 .78rem/1.2 system-ui,sans-serif; }
+.colophon-code-block__copy { min-height:2rem; padding:.2rem .65rem; border:1px solid currentColor; border-radius:4px; background:transparent; color:inherit; }
+.colophon-code-block pre,.post-body__pre { margin:0; padding:1rem; overflow-x:auto; white-space:pre; tab-size:2; background:#111820; color:#eef3f6; }
+:root[data-ui-theme="light"] .colophon-code-block pre,:root[data-ui-theme="light"] .post-body__pre { background:#f2f5f7; color:#17202a; }
+.tok-comment{opacity:.68;font-style:italic}.tok-keyword{color:#d782ff;font-weight:650}.tok-string{color:#8ed28b}.tok-number,.tok-literal{color:#f2b36f}.tok-tag,.tok-selector{color:#79bfff}.tok-attr{color:#ffd27d}
+:root[data-ui-theme="light"] .tok-comment{color:#5a6975;opacity:1}:root[data-ui-theme="light"] .tok-keyword{color:#7b2db3}:root[data-ui-theme="light"] .tok-string{color:#246a2b}:root[data-ui-theme="light"] .tok-number,:root[data-ui-theme="light"] .tok-literal{color:#9b4f00}:root[data-ui-theme="light"] .tok-tag,:root[data-ui-theme="light"] .tok-selector{color:#005ea8}:root[data-ui-theme="light"] .tok-attr{color:#7d5200}
+.colophon-theme-list,.colophon-passkey-list,.colophon-webmention-list{display:grid;gap:.75rem;margin:1rem 0}.colophon-theme-card,.colophon-passkey-card,.colophon-webmention-card{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;padding:.85rem;border:1px solid color-mix(in srgb,var(--text) 18%,transparent);border-radius:6px}.indieweb-meta{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+:root[data-theme-article="narrow"] .piece-layout{max-width:70rem;margin-inline:auto}:root[data-theme-article="wide"] .piece-layout{max-width:110rem;margin-inline:auto}:root[data-theme-archive="list"] .home-feed-grid{grid-template-columns:1fr!important}:root[data-theme-header="centered"] .publication-topbar{text-align:center}:root[data-theme-footer="compact"] .publication-footer__top{padding-block:1rem}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* Product-wide dark surfaces. These rules follow legacy component styles so hard-coded light panels inherit the selected interface mode. */
+html[data-ui-theme="dark"] :where(
+  .wp-admin-screen,
+  .admin-page,
+  .admin-dashboard,
+  .admin-login-page,
+  .media-library-page,
+  .audio-lab,
+  .audio-lab-page,
+  .printlab,
+  .printlab-page,
+  .print-lab-page,
+  .desktop-welcome,
+  .desktop-publish-page,
+  .publication-homepage,
+  .piece-page,
+  .publication-reader,
+  .campaign-page,
+  .campaign-admin-page,
+  .campaign-directory,
+  .publications-page,
+  .collections-page
+) {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+html[data-ui-theme="dark"] :where(
+  .wp-admin-screen,
+  .admin-page,
+  .admin-dashboard,
+  .media-library-page,
+  .audio-lab,
+  .audio-lab-page,
+  .printlab,
+  .printlab-page,
+  .print-lab-page,
+  .desktop-welcome,
+  .publication-homepage,
+  .piece-page,
+  .publication-reader,
+  .campaign-admin-page
+) :where(
+  section,
+  article,
+  aside,
+  details,
+  fieldset,
+  .wp-meta-box,
+  .review-card,
+  .review-summary-card,
+  .browser-start-card,
+  .desktop-publish-card,
+  .admin-public-config-card,
+  .public-type-preview,
+  .public-navigation-editor__row,
+  .colophon-media-inspector,
+  .media-library-card,
+  .campaign-admin-row,
+  .campaign-admin-section-row,
+  .campaign-coverage-moderation__item
+) {
+  border-color: #3b4650 !important;
+}
+
+html[data-ui-theme="dark"] :where(
+  .wp-admin-screen,
+  .admin-page,
+  .admin-dashboard,
+  .media-library-page,
+  .audio-lab,
+  .audio-lab-page,
+  .printlab,
+  .printlab-page,
+  .print-lab-page,
+  .desktop-welcome,
+  .publication-reader,
+  .campaign-admin-page
+) :where(
+  .wp-meta-box,
+  .review-card,
+  .review-summary-card,
+  .browser-start-card,
+  .desktop-publish-card,
+  .admin-public-config-card,
+  .public-type-preview,
+  .public-navigation-editor__row,
+  .colophon-media-inspector,
+  .media-library-card,
+  .campaign-admin-row,
+  .campaign-admin-section-row,
+  .campaign-coverage-moderation__item,
+  .audio-lab-panel,
+  .audio-lab-card,
+  .printlab-panel,
+  .printlab-card
+) {
+  background: #15191d !important;
+  color: #f0f3f5 !important;
+}
+
+html[data-ui-theme="dark"][data-colophon-runtime="browser-local"] body,
+html[data-ui-theme="dark"][data-colophon-runtime="browser-local"] .desktop-welcome {
+  background: #090b0d !important;
+  color: #f0f3f5 !important;
+}
+
+html[data-ui-theme="dark"][data-colophon-runtime="browser-local"] :where(
+  .desktop-welcome__steps > div,
+  .desktop-publish-card,
+  .browser-start-card
+) {
+  background: #15191d !important;
+  color: #f0f3f5 !important;
+  border-color: #49545d !important;
+}
+
+html[data-ui-theme="dark"] :where(.piece-page, .publication-homepage, .publication-reader) :where(
+  .piece-article-lead,
+  .piece-body-wrap,
+  .home-feed-card,
+  .publication-reader__page,
+  .publication-reader__content
+) {
+  color: var(--text) !important;
+}
+
+html[data-ui-theme="dark"] .publication-footer {
+  background: #0f1215 !important;
+  color: #f0f3f5 !important;
+  border-color: #39434c !important;
+}
+
+html[data-ui-theme="dark"] .publication-footer a {
+  color: #9bd0ff !important;
+}
+
+html[data-ui-theme="dark"] .campaign-page :where(
+  .campaign-latest,
+  .campaign-dispatch-list article,
+  .campaign-dispatch-empty,
+  .campaign-question-layout form,
+  .campaign-benefit-materials article,
+  .campaign-benefit-copy,
+  .campaign-section--questions,
+  .campaign-section--act,
+  .campaign-directory__intro,
+  .campaign-directory__summary,
+  .campaign-directory-card
+) {
+  background: #15191d !important;
+  color: #f0f3f5 !important;
+  border-color: #53616c !important;
+}
+
+html[data-ui-theme="dark"] :where(.campaign-page, .campaign-directory) :where(p, li, h1, h2, h3, h4, strong, small) {
+  color: inherit;
+}
+
+html[data-ui-theme="dark"] :where(input, textarea, select, [contenteditable="true"])::placeholder {
+  color: #8f9ba5;
+  opacity: 1;
+}
+
+html[data-ui-theme="dark"] :where(hr) {
+  border-color: #3c4650;
+}
+
+.newsroom-preferences-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}

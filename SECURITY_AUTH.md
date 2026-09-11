@@ -48,3 +48,20 @@ Other hosting adapters should provide an equivalent trusted authentication bound
 ## Deployment notes
 
 Authentication depends on HTTPS in production. A normal editor should not have to understand the session implementation; deployment-specific diagnostics belong in Site Health and operator documentation.
+
+## TOTP two-factor authentication
+
+Shared/server user accounts can optionally enable time-based one-time-password (TOTP) two-factor authentication. Enrollment is not marked active until the user verifies a current six-digit code.
+
+TOTP secrets are encrypted before D1 storage with AES-GCM. Operators enabling TOTP must configure `COLOPHON_2FA_ENCRYPTION_KEY` with at least 32 high-entropy characters. Recovery codes are shown only when generated and are stored only as hashes; each recovery code is single-use.
+
+Disabling TOTP, regenerating recovery codes, and deleting a passkey require password reauthentication. Login and second-factor attempts are rate-limited.
+
+## Passkeys / WebAuthn
+
+Shared/server user accounts can register one or more named WebAuthn passkeys where the browser exposes the required APIs. The first implementation supports ES256/P-256 credentials. Colophon stores the credential id, public key, signature counter, name, and non-secret transport metadata. Authenticator private keys remain with the authenticator and are never sent to Colophon.
+
+The initial sign-in flow is username-first: enter the account email, then choose **Sign in with passkey**. Registration and authentication challenges are short-lived, single-use server records bound to the user and relying-party origin.
+
+Local browser/PWA and desktop-only editions remain account-free and therefore do not require TOTP or passkeys.
+

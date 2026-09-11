@@ -81,3 +81,10 @@ Especially keep these accurate:
 ## License
 
 By contributing, you agree that your contribution is provided under the repository's GPL-3.0 license.
+
+## Themes and extensions
+
+Third-party presentation work should target the documented declarative theme format in `docs/THEMES.md`.
+
+Trusted build-time integrations should target the versioned hooks documented in `docs/EXTENSIONS.md`. Do not depend on private React components, database internals, or undocumented hook names as compatibility promises. Colophon does not use an uploaded arbitrary-code plugin system as its extension model.
+

@@ -197,6 +197,14 @@ export function sanitizeClassicEditorNode(node) {
     return `<source src="${escapeAttr(src)}"${type ? ` type="${escapeAttr(type)}"` : ''} />`
   }
 
+  if (tag === 'code') return `<code>${children}</code>`
+
+  if (tag === 'pre') {
+    const rawLanguage = String(node.getAttribute('data-language') || node.querySelector?.('code')?.getAttribute?.('data-language') || '').toLowerCase()
+    const language = /^[a-z0-9_-]{0,32}$/.test(rawLanguage) ? rawLanguage : ''
+    return `<pre${language ? ` data-language="${language}"` : ''}>${children}</pre>`
+  }
+
   if (tag === 'div') {
     const style = String(node.getAttribute('style') || '').toLowerCase()
     const align = style.match(/text-align\s*:\s*(left|center|right)/)
@@ -207,7 +215,7 @@ export function sanitizeClassicEditorNode(node) {
     return `<div>${children}</div>`
   }
 
-  const allowed = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'blockquote', 'figure', 'figcaption', 'br', 'hr'])
+  const allowed = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'blockquote', 'figure', 'figcaption', 'br', 'hr', 'pre', 'code'])
   if (!allowed.has(tag)) return children
 
   if (tag === 'br' || tag === 'hr') return `<${tag} />`

@@ -11,6 +11,7 @@ import {
 import { resolvePublicSitePermission } from './_lib/publicSiteAuth.js'
 import { writeAuditLog, inferActorFromRequest } from './_lib/auditLog.js'
 import { databaseUnavailable, getBoundDb } from './_lib/database.js'
+import { sendWebmentionsForEntry } from './_lib/webmentionSend.js'
 
 const PRIVATE_NATIVE_FIELDS = new Set([
   'sourceNotes',
@@ -176,6 +177,7 @@ async function handleWrite(context) {
     const body = await context.request.json()
     const item = { ...(body?.item || body || {}) }
     const revisionNote = String(body?.revisionNote || item?.revisionNote || 'save')
+    const expectedUpdatedAt = String(body?.expectedUpdatedAt || '')
     const db = getBoundDb(context)
 
     if (!db) return databaseUnavailable('native content writes')
@@ -184,6 +186,14 @@ async function handleWrite(context) {
     await ensureNativeRevisionTable(db)
 
     const existing = item?.id ? await getExistingNativeEntry(db, item.id) : null
+    if (existing && expectedUpdatedAt && String(existing.updatedAt || '') !== expectedUpdatedAt) {
+      return json({
+        ok: false,
+        conflict: true,
+        error: 'This content changed since you opened it. Reload the latest version before saving over it.',
+        current: existing,
+      }, 409)
+    }
     if (existing && !String(item.slug || '').trim()) {
       item.slug = existing.slug
     }
@@ -193,6 +203,11 @@ async function handleWrite(context) {
 
     const saved = await upsertNativeEntry(db, item)
     await saveRevisionSnapshot(db, saved, revisionNote)
+    if (saved.status === 'published' && !['autosave', 'preview'].includes(revisionNote)) {
+      const task = sendWebmentionsForEntry(context, db, saved).catch(() => [])
+      if (typeof context.waitUntil === 'function') context.waitUntil(task)
+      else task.catch(() => {})
+    }
     await writeAuditLog(db, {
       action: 'native_content.upsert',
       entityType: 'native_content',

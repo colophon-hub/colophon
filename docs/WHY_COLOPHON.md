@@ -111,3 +111,10 @@ See [INDIEWEB.md](INDIEWEB.md).
 - [Compatibility notes](../COMPATIBILITY.md)
 
 If Colophon fits, use it. If it almost fits, open an issue. If it needs to become something fundamentally different, fork it. That is what free software is for.
+
+## Product-maturity layer
+
+Colophon now includes optional Markdown authoring, reusable declarative themes, Light/Dark/System appearance, syntax-highlighted code blocks, shared-server TOTP/passkeys, IndieWeb microformats2/`rel=me`/Webmention interoperability, and a small documented extension-hook boundary.
+
+That boundary remains intentionally narrower than WordPress's arbitrary executable plugin ecosystem. Imported Colophon themes are declarative and cannot execute uploaded server code. Real-time simultaneous collaborative editing and full Micropub/IndieAuth remain future work rather than advertised capabilities.
+

@@ -5,6 +5,9 @@ import { RobotVoiceSettingsCard } from './RobotVoiceSettingsCard'
 import { PublishingModulesCard } from './PublishingModulesCard'
 import { InstallReadinessCard } from './InstallReadinessCard'
 import { DesktopPublishOnlineCard } from './DesktopPublishOnlineCard'
+import { AppearanceSettingsCard } from './AppearanceSettingsCard'
+import { ThemesSettingsCard } from './ThemesSettingsCard'
+import { WebmentionsAdminCard } from './WebmentionsAdminCard'
 import { getPieces } from '../lib/pieces'
 import { adminRoutes } from '../routing/routes'
 import { publicPageRegistry, withSiteEdit } from '../lib/publicPageRegistry'
@@ -56,6 +59,9 @@ export function SettingsAdminPage() {
           <Link className="button button--primary" to={withSiteEdit('/')}>Edit Live</Link>
         </div>
         <DesktopPublishOnlineCard />
+        <AppearanceSettingsCard />
+        <ThemesSettingsCard />
+        <WebmentionsAdminCard />
         <PublishingModulesCard />
         <InstallReadinessCard />
         <AdminPublicConfigCard />

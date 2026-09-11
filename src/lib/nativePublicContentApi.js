@@ -26,12 +26,12 @@ export async function fetchNativeEntries(params = {}) {
   return data
 }
 
-export async function saveNativeEntry(item, revisionNote = 'save') {
+export async function saveNativeEntry(item, revisionNote = 'save', expectedUpdatedAt = '') {
   const res = await fetch('/api/native-content', {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ item, revisionNote }),
+    body: JSON.stringify({ item, revisionNote, expectedUpdatedAt }),
   })
 
   const data = await safeJson(res)

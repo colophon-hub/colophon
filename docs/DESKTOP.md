@@ -61,3 +61,8 @@ Unsigned development builds may trigger normal operating-system warnings. Public
 Desktop is not a dead-end local editor. The **Publish** menu opens the Publish Online guidance and domain setup.
 
 See `docs/PUBLISH_ONLINE.md` for the $0-hosting-first policy and current supported deployment route.
+
+## Product-maturity features and the local account boundary
+
+Desktop supports Light / Dark / System interface appearance, Markdown authoring, syntax-highlighted code blocks, and declarative publication themes. Desktop local mode remains a trusted localhost workflow and does not suddenly require a Colophon account. TOTP/passkeys protect shared/server accounts, not the local desktop workspace.
+

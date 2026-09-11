@@ -22,12 +22,12 @@ export function HomeFeedCard({ item, variant = 'recent' }) {
 
   if (mode === 'hidden' && hasImage) {
     return (
-      <article className={classes} data-home-card-mode="hidden">
-        <Link className="home-feed-card__link home-feed-card__link--image-only" to={item.href}>
+      <article className={`h-entry ${classes}`} data-home-card-mode="hidden">
+        <Link className="u-url home-feed-card__link home-feed-card__link--image-only" to={item.href}>
           <div className="home-feed-card__media home-feed-card__media--image-only">
-            <img className="home-feed-card__actual-image" src={item.imageUrl} alt="" />
+            <img className="u-photo u-featured home-feed-card__actual-image" src={item.imageUrl} alt="" />
           </div>
-          <Heading className="screen-reader-only">{item.title}</Heading>
+          <Heading className="p-name screen-reader-only">{item.title}</Heading>
         </Link>
       </article>
     )
@@ -35,16 +35,17 @@ export function HomeFeedCard({ item, variant = 'recent' }) {
 
   if (mode === 'overlay' && hasImage) {
     return (
-      <article className={classes} data-home-card-mode="overlay">
-        <Link className="home-feed-card__link" to={item.href}>
+      <article className={`h-entry ${classes}`} data-home-card-mode="overlay">
+        <Link className="u-url home-feed-card__link" to={item.href}>
           <div
             className="home-feed-card__media home-feed-card__media--backdrop"
             aria-hidden="true"
             style={{ backgroundImage: `url("${item.imageUrl}")` }}
           />
+          <img className="u-photo u-featured screen-reader-only" src={item.imageUrl} alt="" />
           <div className="home-feed-card__overlay-flow">
             <CardMeta item={item} published={published} isHero={isHero} />
-            <Heading className="home-feed-card__title">{item.title}</Heading>
+            <Heading className="p-name home-feed-card__title">{item.title}</Heading>
           </div>
         </Link>
       </article>
@@ -52,16 +53,16 @@ export function HomeFeedCard({ item, variant = 'recent' }) {
   }
 
   return (
-    <article className={classes} data-home-card-mode="below">
+    <article className={`h-entry ${classes}`} data-home-card-mode="below">
       {hasImage ? (
         <Link className="home-feed-card__media-link" to={item.href} aria-label={item.title}>
-          <img className="home-feed-card__actual-image" src={item.imageUrl} alt="" />
+          <img className="u-photo u-featured home-feed-card__actual-image" src={item.imageUrl} alt="" />
         </Link>
       ) : null}
       <div className="home-feed-card__below-copy">
         <CardMeta item={item} published={published} isHero={isHero} />
-        <Heading className="home-feed-card__title">
-          <Link to={item.href}>{item.title}</Link>
+        <Heading className="p-name home-feed-card__title">
+          <Link className="u-url" to={item.href}>{item.title}</Link>
         </Heading>
       </div>
     </article>
@@ -71,7 +72,7 @@ export function HomeFeedCard({ item, variant = 'recent' }) {
 function CardMeta({ item, published, isHero }) {
   return (
     <div className="home-feed-card__meta">
-      {published ? <span>{published}</span> : null}
+      {published ? <time className="dt-published" dateTime={item?.publishedAt || item?.updatedAt || published}>{published}</time> : null}
       {item?.target ? <span>{item.target}</span> : null}
       {isHero && item?.contentType ? <span>{item.contentType}</span> : null}
     </div>

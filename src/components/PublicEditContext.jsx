@@ -5,13 +5,13 @@ import { buildPublicConfigPayload } from '../lib/publicDraftExport'
 import { normalizePublicConfig, PUBLIC_CONFIG_SCHEMA_VERSION } from '../lib/publicConfigSchema'
 import { useAdminAuth } from './AdminAuthContext'
 
-const STORAGE_KEY = 'colophon-public-edit-draft-v5'
-const LEGACY_STORAGE_KEYS = ['colophon-public-edit-draft-v4', 'colophon-public-edit-draft-v3', 'colophon-public-edit-draft-v2']
+const STORAGE_KEY = 'colophon-public-edit-draft-v6'
+const LEGACY_STORAGE_KEYS = ['colophon-public-edit-draft-v5', 'colophon-public-edit-draft-v4', 'colophon-public-edit-draft-v3', 'colophon-public-edit-draft-v2']
 const PublicEditContext = createContext(null)
 
 function emptyConfig() { return normalizePublicConfig({}) }
-function emptyDraft() { return { identity: {}, appearance: {}, navigation: {}, text: {}, styles: {}, blocks: {} } }
-function toDraftShape(config) { return { identity: config?.identity || {}, appearance: config?.appearance || {}, navigation: config?.navigation || {}, text: config?.text || {}, styles: config?.styles || {}, blocks: config?.blocks || {} } }
+function emptyDraft() { return { identity: {}, indieweb: {}, themes: {}, appearance: {}, navigation: {}, text: {}, styles: {}, blocks: {} } }
+function toDraftShape(config) { return { identity: config?.identity || {}, indieweb: config?.indieweb || {}, themes: config?.themes || {}, appearance: config?.appearance || {}, navigation: config?.navigation || {}, text: config?.text || {}, styles: config?.styles || {}, blocks: config?.blocks || {} } }
 function clearDraftCache() { try { window.localStorage.removeItem(STORAGE_KEY); LEGACY_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key)) } catch {} }
 function loadDraftCache() {
   try {
@@ -60,6 +60,8 @@ export function PublicEditProvider({ children }) {
     const current = draftRef.current || emptyDraft()
     return Boolean(
       Object.keys(current.identity || {}).length
+      || Object.keys(current.indieweb || {}).length
+      || Object.keys(current.themes || {}).length
       || Object.keys(current.appearance || {}).length
       || Object.keys(current.navigation || {}).length
       || Object.keys(current.text || {}).length
@@ -111,6 +113,8 @@ export function PublicEditProvider({ children }) {
   }, [isEditing])
 
   const changedIdentityFields = useMemo(() => Object.keys(draft?.identity || {}).sort(), [draft])
+  const changedIndieWebFields = useMemo(() => Object.keys(draft?.indieweb || {}).sort(), [draft])
+  const changedThemeFields = useMemo(() => Object.keys(draft?.themes || {}).sort(), [draft])
   const changedAppearanceFields = useMemo(() => Object.keys(draft?.appearance || {}).sort(), [draft])
   const changedNavigationFields = useMemo(() => Object.keys(draft?.navigation || {}).sort(), [draft])
   const changedTextFields = useMemo(() => Object.keys(draft?.text || {}).sort(), [draft])
@@ -118,24 +122,26 @@ export function PublicEditProvider({ children }) {
   const changedBlockFields = useMemo(() => Object.keys(draft?.blocks || {}).sort(), [draft])
   const changedFields = useMemo(() => [...new Set([
     ...changedIdentityFields.map((key) => `identity.${key}`),
+    ...changedIndieWebFields.map((key) => `indieweb.${key}`),
+    ...changedThemeFields.map((key) => `themes.${key}`),
     ...changedAppearanceFields.map((key) => `appearance.${key}`),
     ...changedNavigationFields.map((key) => `navigation.${key}`),
     ...changedTextFields,
     ...changedStyleFields,
     ...changedBlockFields.map((key) => `blocks.${key}`),
-  ])].sort(), [changedIdentityFields, changedAppearanceFields, changedNavigationFields, changedTextFields, changedStyleFields, changedBlockFields])
+  ])].sort(), [changedIdentityFields, changedIndieWebFields, changedThemeFields, changedAppearanceFields, changedNavigationFields, changedTextFields, changedStyleFields, changedBlockFields])
 
-  const draftStats = useMemo(() => ({ identityCount: changedIdentityFields.length, appearanceCount: changedAppearanceFields.length, navigationCount: changedNavigationFields.length, textCount: changedTextFields.length, styleCount: changedStyleFields.length, blockCount: changedBlockFields.length, totalCount: changedFields.length }), [changedIdentityFields, changedAppearanceFields, changedNavigationFields, changedTextFields, changedStyleFields, changedBlockFields, changedFields])
-  const savedStats = useMemo(() => ({ identityCount: Object.keys(savedConfig?.identity || {}).length, appearanceCount: Object.keys(savedConfig?.appearance || {}).length, navigationCount: Object.keys(savedConfig?.navigation || {}).length, textCount: Object.keys(savedConfig?.text || {}).length, styleCount: Object.keys(savedConfig?.styles || {}).length, blockCount: Object.keys(savedConfig?.blocks || {}).length }), [savedConfig])
+  const draftStats = useMemo(() => ({ identityCount: changedIdentityFields.length, indiewebCount: changedIndieWebFields.length, themeCount: changedThemeFields.length, appearanceCount: changedAppearanceFields.length, navigationCount: changedNavigationFields.length, textCount: changedTextFields.length, styleCount: changedStyleFields.length, blockCount: changedBlockFields.length, totalCount: changedFields.length }), [changedIdentityFields, changedIndieWebFields, changedThemeFields, changedAppearanceFields, changedNavigationFields, changedTextFields, changedStyleFields, changedBlockFields, changedFields])
+  const savedStats = useMemo(() => ({ identityCount: Object.keys(savedConfig?.identity || {}).length, indiewebCount: Object.keys(savedConfig?.indieweb || {}).length, themeCount: Object.keys(savedConfig?.themes || {}).length, appearanceCount: Object.keys(savedConfig?.appearance || {}).length, navigationCount: Object.keys(savedConfig?.navigation || {}).length, textCount: Object.keys(savedConfig?.text || {}).length, styleCount: Object.keys(savedConfig?.styles || {}).length, blockCount: Object.keys(savedConfig?.blocks || {}).length }), [savedConfig])
   const effectiveConfig = useMemo(() => mergePublicConfig(savedConfig || emptyConfig(), draft || emptyDraft()), [savedConfig, draft])
-  const effectiveStats = useMemo(() => ({ identityCount: Object.keys(effectiveConfig?.identity || {}).length, appearanceCount: Object.keys(effectiveConfig?.appearance || {}).length, navigationCount: Object.keys(effectiveConfig?.navigation || {}).length, textCount: Object.keys(effectiveConfig?.text || {}).length, styleCount: Object.keys(effectiveConfig?.styles || {}).length, blockCount: Object.keys(effectiveConfig?.blocks || {}).length }), [effectiveConfig])
+  const effectiveStats = useMemo(() => ({ identityCount: Object.keys(effectiveConfig?.identity || {}).length, indiewebCount: Object.keys(effectiveConfig?.indieweb || {}).length, themeCount: Object.keys(effectiveConfig?.themes || {}).length, appearanceCount: Object.keys(effectiveConfig?.appearance || {}).length, navigationCount: Object.keys(effectiveConfig?.navigation || {}).length, textCount: Object.keys(effectiveConfig?.text || {}).length, styleCount: Object.keys(effectiveConfig?.styles || {}).length, blockCount: Object.keys(effectiveConfig?.blocks || {}).length }), [effectiveConfig])
   const hasDraftChanges = changedFields.length > 0
   const isConfigReady = ['d1', 'browser-local'].includes(backendMode) && loadState === 'loaded'
   const startEditing = useCallback(() => { if (!isAdmin) return false; setIsEditing(true); return true }, [isAdmin])
 
   const value = useMemo(() => ({
     isEditing, isAdmin, canSave, backendMode, isConfigReady, selectedField, setSelectedField, draft, savedConfig, effectiveConfig,
-    changedFields, changedIdentityFields, changedAppearanceFields, changedNavigationFields, changedTextFields, changedStyleFields, draftStats, savedStats, effectiveStats, hasDraftChanges,
+    changedFields, changedIdentityFields, changedIndieWebFields, changedThemeFields, changedAppearanceFields, changedNavigationFields, changedTextFields, changedStyleFields, draftStats, savedStats, effectiveStats, hasDraftChanges,
     loadState, saveState, loadError, saveError, permissionState, permissionError, lastLoadedAt, lastSavedAt, configVersion, schemaVersion,
     setSavedConfig, startEditing,
     toggleEditing: () => setIsEditing((v) => { const next = !v; if (!next) setSelectedField(null); return next }),
@@ -143,6 +149,8 @@ export function PublicEditProvider({ children }) {
     async reloadFromBackend() { await reloadFromBackend() },
     discardDraftAndReload() { setDraftSnapshot(emptyDraft()); clearDraftCache(); setSelectedField(null); return reloadFromBackend() },
     updateIdentity(field, value) { setDraftSnapshot((prev) => ({ ...prev, identity: { ...(prev.identity || {}), [field]: value } })) },
+    updateIndieWeb(patch) { setDraftSnapshot((prev) => ({ ...prev, indieweb: { ...(prev.indieweb || {}), ...(patch || {}) } })) },
+    updateThemes(themes) { setDraftSnapshot((prev) => ({ ...prev, themes })) },
     updateAppearance(patch) { setDraftSnapshot((prev) => ({ ...prev, appearance: { ...(prev.appearance || {}), ...(patch || {}) } })) },
     updateTypography(role, fontId) { setDraftSnapshot((prev) => ({ ...prev, appearance: { ...(prev.appearance || {}), typography: { ...(prev.appearance?.typography || {}), [role]: { fontId } } } })) },
     updateCustomFonts(customFonts) { setDraftSnapshot((prev) => ({ ...prev, appearance: { ...(prev.appearance || {}), customFonts } })) },
@@ -168,7 +176,7 @@ export function PublicEditProvider({ children }) {
     replaceDraftWithImported(configLike) { setDraftSnapshot(toDraftShape(normalizePublicConfig(configLike))) },
     exportDraft() { return JSON.stringify(draftRef.current || draft, null, 2) },
     hasPendingDraftChanges,
-  }), [isEditing, isAdmin, canSave, backendMode, isConfigReady, selectedField, draft, savedConfig, effectiveConfig, changedFields, changedIdentityFields, changedAppearanceFields, changedNavigationFields, changedTextFields, changedStyleFields, draftStats, savedStats, effectiveStats, hasDraftChanges, loadState, saveState, loadError, saveError, permissionState, permissionError, lastLoadedAt, lastSavedAt, configVersion, schemaVersion, startEditing])
+  }), [isEditing, isAdmin, canSave, backendMode, isConfigReady, selectedField, draft, savedConfig, effectiveConfig, changedFields, changedIdentityFields, changedIndieWebFields, changedThemeFields, changedAppearanceFields, changedNavigationFields, changedTextFields, changedStyleFields, draftStats, savedStats, effectiveStats, hasDraftChanges, loadState, saveState, loadError, saveError, permissionState, permissionError, lastLoadedAt, lastSavedAt, configVersion, schemaVersion, startEditing])
 
   return <PublicEditContext.Provider value={value}>{children}</PublicEditContext.Provider>
 }

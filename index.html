@@ -18,6 +18,19 @@
     <link rel="icon" type="image/png" href="./colophon-icon.png" />
     <link rel="apple-touch-icon" href="./colophon-icon.png" />
     <link rel="manifest" href="./site.webmanifest" />
+    <script>
+      (function () {
+        try {
+          var key = 'colophon-ui-appearance-v1'
+          var pref = localStorage.getItem(key) || 'system'
+          if (!['system', 'light', 'dark'].includes(pref)) pref = 'system'
+          var dark = pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.dataset.uiThemePreference = pref
+          document.documentElement.dataset.uiTheme = dark ? 'dark' : 'light'
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+        } catch (_) {}
+      }())
+    </script>
   </head>
   <body>
     <div id="root"></div>

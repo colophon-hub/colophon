@@ -9,6 +9,7 @@ import { BrowserCapabilityNotice } from './components/BrowserCapabilityNotice'
 import { installBrowserLocalApi } from './lib/browserLocalApi'
 import { isBrowserLocalRuntime } from './lib/runtime'
 import { registerColophonServiceWorker } from './lib/pwaRuntime'
+import { initializeUiAppearance } from './lib/uiAppearance'
 import './styles.css'
 import './public-mobile.css'
 import './public-admin-toolbar-fix.css'
@@ -97,8 +98,12 @@ import './public-publication-theme.css'
 import './audioLabAudacityMenu.js'
 import './audioLabAudacityQuickTools.js'
 import './audioLabSpaRuntimeGuard.js'
+import './product-maturity.css'
+import './codeBlocks.js'
+import './extensions/index.js'
 
 const browserLocal = isBrowserLocalRuntime()
+initializeUiAppearance()
 installBrowserLocalApi()
 registerColophonServiceWorker()
 

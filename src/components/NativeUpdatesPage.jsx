@@ -186,7 +186,7 @@ export function NativeUpdatesPage({ pieces = [], featured = null, latest = [] })
   const nextLabel = getConfiguredText(resolvedConfig, homeCopy.nextLabel.field, homeCopy.nextLabel.defaultText)
 
   return (
-    <main className="page publication-homepage home-feed-v3" data-home-renderer="v3">
+    <main className="h-feed page publication-homepage home-feed-v3" data-home-renderer="v3">
       <PublicationTopbar />
 
       {usingArchiveFallback ? null : null}

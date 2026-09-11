@@ -52,3 +52,23 @@ Native audio/artwork uses `colophon_MEDIA_BUCKET` and `BF_DB`. Scheduled externa
 ### Public-records lookup
 
 `FOIA_GOV_API_KEY` enables the optional editor-only U.S. federal agency directory. The Public Records Desk itself does not require this integration and remains jurisdiction-neutral.
+
+## Optional shared-server account-security secrets
+
+Shared/server installations that allow users to enroll TOTP must configure a high-entropy encryption secret of at least 32 characters:
+
+```text
+COLOPHON_2FA_ENCRYPTION_KEY=replace-with-a-long-random-secret
+```
+
+Optional labels:
+
+```text
+COLOPHON_TOTP_ISSUER=Colophon
+COLOPHON_WEBAUTHN_RP_NAME=Colophon
+```
+
+Back up the encryption key with the rest of the deployment secrets. Rotating or losing it makes existing encrypted TOTP enrollments unusable.
+
+Passkeys use the production request origin/hostname as their WebAuthn origin and relying-party id. Production passkeys therefore expect a stable HTTPS origin.
+

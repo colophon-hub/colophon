@@ -1,6 +1,7 @@
 import { permissionHasCapability, resolvePublicSitePermission } from './api/_lib/publicSiteAuth.js'
 import { getNativeEntry } from './api/_lib/nativePublicContent.js'
 import { getCampaign } from './api/_lib/campaigns.js'
+import { readPublicSiteConfig } from './api/_lib/publicSiteConfig.js'
 
 export const ADMIN_PREFIXES = [
   '/admin', '/wp-admin', '/printlab', '/audiolab', '/content', '/posts', '/add-new', '/post-new', '/native-bridge',
@@ -12,7 +13,7 @@ export const ADMIN_PREFIXES = [
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 const PAGE_METHODS = new Set(['GET', 'HEAD'])
-const PUBLIC_AUTH_API_PATHS = new Set(['/api/login', '/api/logout', '/api/session', '/api/analytics/collect', '/api/campaign-contributor-auth', '/api/campaign-correspondence', '/api/campaign-contributor-media'])
+const PUBLIC_AUTH_API_PATHS = new Set(['/api/login', '/api/logout', '/api/session', '/api/account-security', '/api/webauthn', '/api/webmention', '/api/analytics/collect', '/api/campaign-contributor-auth', '/api/campaign-correspondence', '/api/campaign-contributor-media'])
 const PUBLIC_SPA_EXACT_PATHS = new Set([
   '/', '/archive', '/search', '/about', '/security', '/contact', '/submit', '/support', '/press', '/feeds',
   '/collections', '/publications', '/updates', '/projects', '/Exampletown-local-1312-gallery', '/login', '/wp-login', '/logout',
@@ -58,6 +59,7 @@ const API_WRITE_CAPABILITIES = [
   ['/api/media/files', 'media:write'],
   ['/api/audiolab', 'media:write'],
   ['/api/podcasts', 'publishing:write'],
+  ['/api/webmentions', 'publishing:write'],
 ]
 
 export function isAdminRoutePath(pathname = '') {
@@ -167,7 +169,13 @@ async function renderSpaShell(context, url) {
   if (!response.ok) return response
   const headers = new Headers(response.headers)
   headers.set('cache-control', 'public, max-age=60, s-maxage=300')
-  return new Response(context.request.method === 'HEAD' ? null : response.body, { status: 200, headers })
+  if (context.request.method === 'HEAD' || !String(response.headers.get('content-type') || '').includes('text/html')) {
+    return new Response(null, { status: 200, headers })
+  }
+  let html = await response.text()
+  html = html.replace('</head>', `    <link rel="webmention" href="${escapeHtml(`${url.origin}/api/webmention`)}" />\n  </head>`)
+  headers.delete('content-length')
+  return new Response(html, { status: 200, headers })
 }
 
 async function renderPublicCampaign(context, url) {
@@ -210,10 +218,12 @@ async function renderPublicCampaign(context, url) {
 async function renderPublicPost(context, url) {
   const slug = decodeURIComponent(url.pathname.split('/').filter(Boolean)[1] || '')
   let post = null
+  let publicConfig = null
 
   if (context.env?.BF_DB) {
     try {
       post = await getNativeEntry(context.env.BF_DB, slug)
+      publicConfig = (await readPublicSiteConfig(context.env.BF_DB, 'global'))?.config || null
     } catch {
       // The route must still return the SPA when content storage is unavailable.
     }
@@ -247,7 +257,23 @@ async function renderPublicPost(context, url) {
 
   let rendered = html
   for (const [from, to] of Object.entries(replacements)) rendered = rendered.replace(from, to)
-  rendered = rendered.replace('</head>', `    <meta property="og:url" content="${escapeHtml(canonical)}" />\n    <link rel="canonical" href="${escapeHtml(canonical)}" />\n  </head>`)
+  rendered = rendered.replace('</head>', `    <meta property="og:url" content="${escapeHtml(canonical)}" />\n    <link rel="canonical" href="${escapeHtml(canonical)}" />\n    <link rel="webmention" href="${escapeHtml(`${url.origin}/api/webmention`)}" />\n  </head>`)
+
+  if (post) {
+    const authorName = cleanText(post.author || publicConfig?.indieweb?.authorName || '')
+    const authorUrl = publicConfig?.indieweb?.authorUrl || publicConfig?.identity?.siteUrl || ''
+    const authorPhoto = publicConfig?.indieweb?.authorPhotoUrl || ''
+    const categories = [...(Array.isArray(post.categories) ? post.categories : []), ...(Array.isArray(post.tags) ? post.tags : [])]
+      .filter(Boolean)
+      .map((term) => `<span class="p-category">${escapeHtml(term)}</span>`)
+      .join('')
+    const staticContent = truncate(cleanText(post.bodyHtml || post.body || post.excerpt || ''), 12000) || description
+    const authorMarkup = authorName
+      ? `<span class="p-author h-card">${authorUrl ? `<a class="p-name u-url" href="${escapeHtml(authorUrl)}">${escapeHtml(authorName)}</a>` : `<span class="p-name">${escapeHtml(authorName)}</span>`}${authorPhoto ? `<img class="u-photo" src="${escapeHtml(authorPhoto)}" alt="" />` : ''}</span>`
+      : ''
+    const staticEntry = `<article class="h-entry indieweb-server-meta" hidden><a class="u-url" href="${escapeHtml(canonical)}"></a><h1 class="p-name">${escapeHtml(post.title || title)}</h1>${post.publishedAt ? `<time class="dt-published" datetime="${escapeHtml(post.publishedAt)}">${escapeHtml(post.publishedAt)}</time>` : ''}${post.updatedAt ? `<time class="dt-updated" datetime="${escapeHtml(post.updatedAt)}">${escapeHtml(post.updatedAt)}</time>` : ''}${authorMarkup}${image ? `<img class="u-featured u-photo" src="${escapeHtml(image)}" alt="" />` : ''}${categories}<div class="e-content">${escapeHtml(staticContent)}</div></article>`
+    rendered = rendered.replace('</body>', `${staticEntry}\n</body>`)
+  }
 
   const headers = new Headers(response.headers)
   headers.set('content-type', 'text/html; charset=utf-8')

@@ -6,6 +6,7 @@ import {
 import { getImportedImage } from './getImportedImage'
 import { normalizeNativeDisplaySettings } from './publicDisplayModes'
 import { getDefaultFeaturedTitleDisplayForContentType, normalizeFeaturedTitleDisplay, resolveFeaturedTitleDisplay } from './featuredTitleDisplay'
+import { emitExtensionEvent } from '../../shared/extensionHooks.js'
 
 const FALLBACK_STORAGE_KEY = 'colophon-native-public-content-v1'
 
@@ -34,6 +35,7 @@ export function createEmptyNativeEntry() {
     slug: '',
     excerpt: '',
     body: '',
+    sourceFormat: 'html',
     richBody: [],
     author: '',
     sourceType: 'manual',
@@ -106,6 +108,7 @@ export function normalizeNativeEntry(input) {
     slug: slugify(raw.slug || raw.title || ''),
     excerpt: String(raw.excerpt || ''),
     body: String(raw.body || ''),
+    sourceFormat: ['html', 'markdown'].includes(String(raw.sourceFormat || '')) ? String(raw.sourceFormat) : 'html',
     richBody: Array.isArray(raw.richBody) ? raw.richBody : [],
     author: String(raw.author || ''),
     sourceType: String(raw.sourceType || 'manual'),
@@ -287,16 +290,22 @@ export async function upsertNativeEntry(items, entry, revisionNote = 'save') {
 }
 
 export async function upsertNativeEntryWithMeta(items, entry, revisionNote = 'save') {
+  const expectedUpdatedAt = String(entry?.updatedAt || '')
   const normalizedEntry = normalizeNativeEntry({
     ...entry,
     updatedAt: new Date().toISOString(),
     publishedAt: ['published', 'scheduled'].includes(String(entry?.status || '')) ? String(entry.publishedAt || new Date().toISOString()) : String(entry?.publishedAt || ''),
   })
-  const data = await saveNativeEntry(normalizedEntry, revisionNote)
+  const eventPayload = { item: normalizedEntry, revisionNote: String(revisionNote || 'save') }
+  if (normalizedEntry.status === 'published') await emitExtensionEvent('content:beforePublish', eventPayload)
+  await emitExtensionEvent('content:beforeSave', eventPayload)
+  const data = await saveNativeEntry(normalizedEntry, revisionNote, expectedUpdatedAt)
   if (!data?.ok || !data?.item || data.mode === 'scaffold') {
     throw new Error(data?.error || 'Native content save did not receive confirmed D1 persistence')
   }
   const saved = normalizeNativeEntry(data.item)
+  await emitExtensionEvent('content:afterSave', { item: saved, revisionNote: String(revisionNote || 'save') })
+  if (saved.status === 'published') await emitExtensionEvent('content:afterPublish', { item: saved, revisionNote: String(revisionNote || 'save') })
   const current = normalizeNativeCollection(items || [])
   const next = current.some((item) => item.id === saved.id)
     ? current.map((item) => (item.id === saved.id ? saved : item))

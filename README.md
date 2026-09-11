@@ -21,7 +21,13 @@ A publication can use only the modules it needs, including:
 - media management;
 - print and publication projects;
 - AudioLab and PrintLab;
-- analytics, users, settings, and editorial workflows.
+- analytics, users, settings, and editorial workflows;
+- optional Markdown authoring and syntax-highlighted code blocks;
+- Light / Dark / System interface appearance;
+- reusable declarative themes;
+- optional TOTP two-factor authentication and passkeys for shared-server accounts;
+- IndieWeb microformats2, configurable `rel=me`, and moderated Webmention receive/send;
+- a small versioned build-time extension hooks API.
 
 First-run presets include **Simple Blog**, **Media Publication**, **Everything**, and **Custom**.
 
@@ -73,7 +79,7 @@ See the full [Why Colophon? comparison](docs/WHY_COLOPHON.md).
 
 Colophon's goals overlap heavily with the IndieWeb: own your domain, own your content, and make migration survivable.
 
-We are adding standards support where it creates real interoperability. The first target is clean **microformats2** markup for published entries, followed by **Webmention**. **Micropub** is a later target once the content model and authentication surface are stable enough to expose as a durable publishing API.
+Colophon now emits **microformats2** for published entries/listings, supports configurable **`rel=me`** identity, and the shared/server edition can receive, moderate, render, discover, and send **Webmentions**. **Micropub** remains a later target because the external IndieAuth/token boundary should be designed correctly rather than improvised from admin-session credentials.
 
 See [IndieWeb support](docs/INDIEWEB.md).
 
@@ -130,6 +136,10 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md). For an idea that is not yet scope
 - [Desktop](docs/DESKTOP.md)
 - [Publishing online](docs/PUBLISH_ONLINE.md)
 - [IndieWeb support](docs/INDIEWEB.md)
+- [Markdown authoring](docs/MARKDOWN.md)
+- [Themes](docs/THEMES.md)
+- [Extension hooks](docs/EXTENSIONS.md)
+- [Product-maturity implementation notes](docs/RELEASE_PRODUCT_MATURITY.md)
 - [NoBlogs migration notes](docs/NOBLOGS_MIGRATION.md)
 - [Compatibility](COMPATIBILITY.md)
 - [Security and authentication](SECURITY_AUTH.md)

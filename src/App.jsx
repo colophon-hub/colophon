@@ -61,6 +61,7 @@ import { getPublicPageMeta } from './lib/publicPageRegistry'
 import { DesktopWelcomePage } from './components/DesktopWelcomePage'
 import { DesktopPublishOnlinePage } from './components/DesktopPublishOnlinePage'
 import { useResolvedConfig } from './lib/useResolvedConfig'
+import { ThemeRuntime } from './components/ThemeRuntime'
 
 const pieces = getPieces()
 const featured = getFeaturedPiece(pieces)
@@ -288,6 +289,7 @@ export default function App() {
   return (
     <AdminAuthProvider>
       <PublicEditProvider>
+        <ThemeRuntime />
         <AdminNoticeProvider>
           <ScrollToTop />
           <RouteMeta pieces={pieces} />

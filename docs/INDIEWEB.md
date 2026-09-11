@@ -10,102 +10,62 @@ This document tracks concrete interoperability support. It is intentionally cons
 |---|---|---|
 | Own-domain publishing | Supported | Self-hosted installations can publish on an independently controlled domain. |
 | RSS / feeds | Supported | Colophon has public feed support, including podcast feeds. |
-| microformats2 | Next | Add `h-entry`/`p-name`/`e-content` metadata to public entries, then validate against IndieWeb tooling. |
-| `h-card` identity | Planned | Publication/author identity needs a clean configuration-to-markup path. |
-| `rel=me` | Planned | Should be configurable per publication/author rather than hard-coded. |
-| Webmention receiving | Planned | Requires endpoint, verification, storage, moderation, abuse controls, and rendering policy. |
-| Webmention sending | Planned | Discover endpoints from linked pages and send after publication/update. |
-| Micropub | Later | Useful external publishing API, but should follow a stable content model and authentication story. |
-| IndieAuth | Later / evaluate | Evaluate alongside Micropub rather than inventing a parallel auth system. |
+| microformats2 | Implemented | Public posts expose `h-entry`, `p-name`, `e-content`, canonical `u-url`, publication/update dates, author data when available, featured image metadata, and categories/tags. Homepage listings expose `h-feed` with nested `h-entry` cards. Validate a real deployed URL before treating a particular installation as proven. |
+| `h-card` identity | Implemented | Publication/author identity is configurable and rendered as `h-card` metadata where available. |
+| `rel=me` | Implemented | Multiple publication/author identity URLs can be configured without platform-specific assumptions. |
+| Webmention receiving | Shared/server | `/api/webmention` verifies source → target links, persists mentions, rate-limits submissions, and keeps remote content pending until editorial moderation. |
+| Webmention sending | Shared/server | Linked external pages are checked for Webmention discovery after explicit published saves; failures are recorded and do not block publication. |
+| Micropub | Deferred | The current authentication model does not yet provide the external authorization/token boundary needed for a durable Micropub implementation. |
+| IndieAuth | Deferred / evaluate | Evaluate together with Micropub rather than inventing an insecure parallel token scheme. |
 
-## Phase 1: microformats2
+## microformats2 and identity
 
-Start with published article/post pages.
+Individual published post pages expose:
 
-Minimum useful entry markup:
-
-- `h-entry` on the entry container;
+- `h-entry` on the entry;
 - `p-name` on the title;
 - `e-content` on the published body;
-- `dt-published` using the machine-readable publication timestamp when available;
-- `u-url` on the canonical post URL;
-- `p-author h-card` when author identity is available as structured data.
+- canonical `u-url`;
+- `dt-published` and `dt-updated` when available;
+- `p-author h-card` when author/publication identity is configured;
+- `u-photo` / `u-featured` for featured imagery when present;
+- `p-category` for categories/tags.
 
-After implementation, test real published URLs with the current IndieWeb/microformats validators. Do not mark the feature complete based only on class names existing in JSX.
+Homepage/feed cards expose `h-feed` / nested `h-entry` markup. Shared-server post shells also emit parser-visible post metadata before the React application hydrates so validators and non-JavaScript consumers are not required to execute the SPA first.
 
-Archive/home listings can then expose `h-feed` plus nested `h-entry` markup.
+Publication identity settings include optional author/display name, profile URL, photo URL, and multiple `rel=me` URLs. These are installation configuration, never hard-coded upstream identity.
 
-## Phase 2: identity
+## Webmention
 
-Publication and author identity should be configuration, not upstream constants.
+The shared/server edition exposes a discoverable Webmention endpoint.
 
-Add structured settings for:
+Receiving performs:
 
-- canonical home URL;
-- display name;
-- avatar/logo;
-- optional author profile URL;
-- `rel=me` URLs.
+1. same-publication target validation;
+2. HTTP/HTTPS source validation;
+3. bounded source fetching and redirect handling;
+4. verification that the source actually links to the target;
+5. durable D1 storage;
+6. rate limiting and literal local/private-address rejection;
+7. pending-by-default editorial moderation;
+8. safe text-only extraction from remote HTML;
+9. approve / reject / spam / delete / reverify controls.
 
-Render those settings as `h-card`/`rel=me` where appropriate.
+Only approved mentions render publicly. Remote scripts, styles, and arbitrary HTML are never inserted into the publication.
 
-This is also the point where a Colophon-powered site can become a useful IndieWeb identity rather than merely emitting parser-friendly article markup.
+Sending discovers Webmention endpoints on linked external pages after an explicit published save. Sending is asynchronous where the runtime provides `waitUntil`; failure is logged and never blocks the content save.
 
-## Phase 3: Webmention
+Browser/PWA-local and desktop-local publications do not pretend to receive Webmentions because they do not have an externally reachable public endpoint.
 
-Webmention is a good fit for Colophon because independent publications should be able to receive references and responses without depending on a centralized social platform.
+## Micropub / IndieAuth
 
-Receiving should include:
+Micropub remains deliberately deferred. Colophon should first expose a standards-appropriate external authorization/token boundary. The current user-session and bootstrap-token mechanisms are for the Colophon administration interface and must not be repurposed into an improvised public publishing token merely to tick a standards checkbox.
 
-1. public endpoint discovery;
-2. source/target validation;
-3. fetching and verifying the source;
-4. durable storage;
-5. spam/abuse controls;
-6. editorial moderation;
-7. safe rendering that does not trust arbitrary remote HTML;
-8. re-verification/removal when a source changes or disappears.
+When implemented later, a first Micropub surface should remain small: create/update/delete posts, title/content, categories/tags, publication status, and media through a documented media boundary.
 
-Sending should:
+## Validation before public claims
 
-1. discover Webmention endpoints on linked targets;
-2. enqueue sends after publication/update;
-3. retry conservatively;
-4. expose failures to editors without blocking publication.
-
-## Phase 4: Micropub
-
-Micropub would let external clients create and update Colophon content.
-
-Do this only after the content model and authentication boundary are stable enough that the API can be maintained without becoming a compatibility trap.
-
-A first implementation should support a deliberately small set:
-
-- create article/draft;
-- title/name;
-- HTML or text content;
-- publication status;
-- categories/tags;
-- media upload through a documented media endpoint;
-- update/delete after create is proven stable.
-
-## Getting Colophon listed on IndieWeb
-
-The IndieWeb `projects` page currently expects projects to have community adoption and at least one key IndieWeb building block. That means the correct order is:
-
-1. ship and validate at least microformats2 support;
-2. have at least one real Colophon site using it;
-3. participate in IndieWeb as an actual person/project user, not merely arrive to drop a link;
-4. document the working example;
-5. add Colophon to the relevant IndieWeb wiki/project pages once it meets their inclusion criteria.
-
-Useful starting points:
-
-- https://indieweb.org/Getting_Started
-- https://indieweb.org/projects
-- https://indieweb.org/microformats
-- https://indieweb.org/Webmention
-- https://indieweb.org/Micropub
+The implementation is present in the codebase, but a deployed installation should still be checked with current microformats/IndieWeb tooling and at least one real Webmention peer before that installation is described as externally validated. Protocols have a charming habit of making one missing slash everybody's problem.
 
 ## Principle
 

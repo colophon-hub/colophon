@@ -14,6 +14,8 @@ import { MediaPickerModal } from './MediaLibraryPage'
 import { WpAdminNotices, useAdminNotices } from './WpAdminNotices'
 import { normalizeNativeDisplaySettings } from '../lib/publicDisplayModes'
 import { classicEditorBodyToHtml } from '../lib/classicEditorBody'
+import { htmlToMarkdown, markdownExportFilename, markdownToSafeHtml } from '../../shared/markdownSupport.js'
+import { SUPPORTED_CODE_LANGUAGES, normalizeCodeLanguage } from '../../shared/codeHighlight.js'
 import { getDefaultFeaturedTitleDisplayForContentType } from '../lib/featuredTitleDisplay'
 import { adminRoutes } from '../routing/routes'
 import { loadCampaigns } from '../lib/campaignsApi'
@@ -33,6 +35,7 @@ function createTypedEntry(kind = 'article') {
     slug: '',
     excerpt: '',
     body: '',
+    sourceFormat: 'html',
     richBody: [],
     status: 'draft',
     workflowState: 'draft',
@@ -219,6 +222,7 @@ function toAutosaveFingerprint(draft, allowComments) {
     slug: draft?.slug || '',
     excerpt: draft?.excerpt || '',
     body: draft?.body || '',
+    sourceFormat: draft?.sourceFormat || 'html',
     contentType: draft?.contentType || 'dispatch',
     status: draft?.status || 'draft',
     workflowState: draft?.workflowState || 'draft',
@@ -275,6 +279,7 @@ export function NativeContentBridgePage() {
   const [activeId, setActiveId] = useState('')
   const [draft, setDraft] = useState(createTypedEntry())
   const [editorTab, setEditorTab] = useState('visual')
+  const [codeLanguage, setCodeLanguage] = useState('text')
   const [tagInput, setTagInput] = useState('')
   const [newCategory, setNewCategory] = useState('')
   const [categoryTab, setCategoryTab] = useState('all')
@@ -509,6 +514,7 @@ export function NativeContentBridgePage() {
         const normalized = buildNormalizedDraft(draft)
         const result = await upsertNativeEntryWithMeta(items, normalized, 'autosave')
         setItems(result.items)
+        if (result.item?.updatedAt) setDraft((current) => ({ ...current, updatedAt: result.item.updatedAt }))
         lastAutosaveFingerprintRef.current = fingerprint
         setAutosaveState({ status: 'saved', at: new Date().toISOString() })
         await reloadServerRevisions(normalized.id, { quiet: true })
@@ -548,7 +554,8 @@ export function NativeContentBridgePage() {
       projects: normalizedCategories,
       featuredImage: merged.featuredImage || merged.heroImage || '',
       heroImage: merged.heroImage || merged.featuredImage || '',
-      bodyHtml: liveBodyToBodyHtml(merged.body || ''),
+      sourceFormat: merged.sourceFormat === 'markdown' ? 'markdown' : 'html',
+      bodyHtml: merged.sourceFormat === 'markdown' ? markdownToSafeHtml(merged.body || '') : liveBodyToBodyHtml(merged.body || ''),
       featuredImageTitle: merged.featuredImageTitle || '',
       featuredTitleDisplay: merged.featuredTitleDisplay || '',
       featuredImageAlt: merged.featuredImageAlt || '',
@@ -573,7 +580,7 @@ export function NativeContentBridgePage() {
     setVisualEditorEmpty(isVisualEditorEmpty(sanitized))
     if (sanitized !== (draft.body || '')) {
       visualSyncLockRef.current = true
-      setDraft((current) => ({ ...current, body: sanitized }))
+      setDraft((current) => ({ ...current, body: sanitized, sourceFormat: 'html' }))
     }
     return sanitized
   }
@@ -581,7 +588,7 @@ export function NativeContentBridgePage() {
   function loadDraftBodyIntoVisualEditor(force = false) {
     const editor = visualEditorRef.current
     if (!editor) return
-    const visualHtml = classicEditorBodyToHtml(draft.body || '')
+    const visualHtml = draft.sourceFormat === 'markdown' ? markdownToSafeHtml(draft.body || '') : classicEditorBodyToHtml(draft.body || '')
     const sanitized = sanitizeVisualHtml(visualHtml)
     if (!force && document.activeElement === editor) return
     if ((editor.innerHTML || '') !== sanitized) {
@@ -617,7 +624,7 @@ export function NativeContentBridgePage() {
   async function handleSave(note = 'save', patch = {}, options = {}) {
     try {
       const liveBody = editorTab === 'visual' ? syncVisualBodyIntoDraft() : draft.body
-      const normalized = buildNormalizedDraft(draft, { ...patch, body: liveBody })
+      const normalized = buildNormalizedDraft(draft, { ...patch, body: liveBody, sourceFormat: editorTab === 'markdown' ? 'markdown' : 'html' })
       const result = await upsertNativeEntryWithMeta(items, normalized, note)
       setItems(result.items)
       const saved = result.items.find((item) => item.id === normalized.id)
@@ -716,6 +723,7 @@ export function NativeContentBridgePage() {
       if (action === 'ul') return runVisualCommand('insertUnorderedList')
       if (action === 'ol') return runVisualCommand('insertOrderedList')
       if (action === 'quote') return runVisualCommand('formatBlock', 'blockquote')
+      if (action === 'code') { const language = normalizeCodeLanguage(codeLanguage); return insertHtmlIntoVisualEditor(`<pre data-language="${escapeHtmlAttribute(language)}"><code class="language-${escapeHtmlAttribute(language)}">${escapeHtmlText('code')}</code></pre>`) }
       if (action === 'left') return runVisualCommand('justifyLeft')
       if (action === 'center') return runVisualCommand('justifyCenter')
       if (action === 'right') return runVisualCommand('justifyRight')
@@ -732,6 +740,7 @@ export function NativeContentBridgePage() {
     if (action === 'ul') return applyEditorMutation((el) => prefixSelectedLines(el, '- '))
     if (action === 'ol') return applyEditorMutation((el) => prefixSelectedLines(el, '1. '))
     if (action === 'quote') return applyEditorMutation((el) => prefixSelectedLines(el, '> '))
+    if (action === 'code') { const language = normalizeCodeLanguage(codeLanguage); return insertAtCursor(editorTab === 'markdown' ? `\n\`\`\`${language === 'text' ? '' : language}\ncode\n\`\`\`\n` : `<pre data-language="${escapeHtmlAttribute(language)}"><code class="language-${escapeHtmlAttribute(language)}">code</code></pre>`) }
     if (action === 'left') return applyEditorMutation((el) => wrapSelectionWithHtmlBlock(el, 'text-align:left;'))
     if (action === 'center') return applyEditorMutation((el) => wrapSelectionWithHtmlBlock(el, 'text-align:center;'))
     if (action === 'right') return applyEditorMutation((el) => wrapSelectionWithHtmlBlock(el, 'text-align:right;'))
@@ -739,13 +748,39 @@ export function NativeContentBridgePage() {
 
   function handleEditorTabChange(nextTab) {
     if (nextTab === editorTab) return
-    if (editorTab === 'visual' && nextTab === 'text') {
-      syncVisualBodyIntoDraft()
+    if (editorTab === 'visual') syncVisualBodyIntoDraft()
+    if (nextTab === 'markdown' && draft.sourceFormat !== 'markdown') {
+      const html = editorTab === 'visual' ? sanitizeVisualHtml(visualEditorRef.current?.innerHTML || draft.body || '') : classicEditorBodyToHtml(draft.body || '')
+      setDraft((current) => ({ ...current, body: htmlToMarkdown(html), sourceFormat: 'markdown' }))
+    }
+    if (nextTab === 'text' && draft.sourceFormat === 'markdown') {
+      setDraft((current) => ({ ...current, body: markdownToSafeHtml(current.body || ''), sourceFormat: 'html' }))
     }
     setEditorTab(nextTab)
-    if (nextTab === 'visual') {
-      requestAnimationFrame(() => loadDraftBodyIntoVisualEditor(true))
-    }
+    if (nextTab === 'visual') requestAnimationFrame(() => loadDraftBodyIntoVisualEditor(true))
+  }
+
+  async function importMarkdownFile(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    try {
+      const source = await file.text()
+      setDraft((current) => ({ ...current, body: source, sourceFormat: 'markdown' }))
+      setEditorTab('markdown')
+      pushNotice(`Imported Markdown from ${file.name}. Save or publish to persist it.`, 'success')
+    } catch (error) { pushNotice(`Markdown import failed: ${String(error?.message || error)}`, 'error') }
+  }
+
+  function exportMarkdownFile() {
+    const source = draft.sourceFormat === 'markdown' ? String(draft.body || '') : htmlToMarkdown(classicEditorBodyToHtml(draft.body || ''))
+    const blob = new Blob([source + (source.endsWith('\n') ? '' : '\n')], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = markdownExportFilename(draft.title || draft.slug || 'untitled')
+    link.click()
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   function handleTitleChange(nextTitle) {
@@ -822,14 +857,18 @@ export function NativeContentBridgePage() {
             <div className="native-content-editor__chrome">
               <div className="native-content-editor__media-row">
                 <button className="button native-content-editor__add-media" type="button" onClick={() => setOpenMediaFor('body')}>Add Media</button>
+                <label className="button native-content-editor__add-media">Import Markdown<input hidden type="file" accept=".md,.markdown,text/markdown,text/plain" onChange={importMarkdownFile} /></label>
+                <button className="button" type="button" onClick={exportMarkdownFile}>Export Markdown</button>
                 <div className="native-content-editor__tabs">
                   <button className={`button${editorTab === 'visual' ? ' button--primary' : ''}`} type="button" onClick={() => handleEditorTabChange('visual')}>Visual</button>
-                  <button className={`button${editorTab === 'text' ? ' button--primary' : ''}`} type="button" onClick={() => handleEditorTabChange('text')}>Text</button>
+                  <button className={`button${editorTab === 'text' ? ' button--primary' : ''}`} type="button" onClick={() => handleEditorTabChange('text')}>HTML source</button>
+                  <button className={`button${editorTab === 'markdown' ? ' button--primary' : ''}`} type="button" onClick={() => handleEditorTabChange('markdown')}>Markdown</button>
                 </div>
               </div>
 
               <div className="native-content-editor__toolbar" aria-label="Editor toolbar">
-                {['bold', 'italic', 'link', 'ul', 'ol', 'quote', 'left', 'center', 'right'].map((action) => (
+                <label className="native-content-editor__code-language"><span className="screen-reader-only">Code language</span><select aria-label="Code block language" value={codeLanguage} onChange={(event) => setCodeLanguage(event.target.value)}>{SUPPORTED_CODE_LANGUAGES.map((language) => <option key={language} value={language}>{language}</option>)}</select></label>
+                {['bold', 'italic', 'link', 'ul', 'ol', 'quote', 'code', 'left', 'center', 'right'].map((action) => (
                   <button className="button" key={action} type="button" onClick={() => handleToolbarAction(action)}>
                     {action}
                   </button>
@@ -858,7 +897,7 @@ export function NativeContentBridgePage() {
                 ref={textareaRef}
                 rows="18"
                 value={draft.body || ''}
-                onChange={(event) => setDraft((current) => ({ ...current, body: event.target.value }))}
+                onChange={(event) => setDraft((current) => ({ ...current, body: event.target.value, sourceFormat: editorTab === 'markdown' ? 'markdown' : 'html' }))}
               />
             )}
           </article>

@@ -36,11 +36,12 @@ export function AdminPublicConfigCard() {
   const {
     canSave, backendMode, changedFields, changedTextFields, changedStyleFields, draftStats, savedStats, effectiveStats,
     effectiveConfig, hasDraftChanges, loadState, saveState, loadError, saveError, permissionError, lastLoadedAt, lastSavedAt,
-    updateIdentity, updateTypography, updateCustomFonts, updateNavigation, saveDraftToBackend, reloadFromBackend, discardDraftAndReload,
+    updateIdentity, updateIndieWeb, updateTypography, updateCustomFonts, updateNavigation, saveDraftToBackend, reloadFromBackend, discardDraftAndReload,
   } = usePublicEdit()
   const backendReady = ['d1', 'browser-local'].includes(backendMode) && loadState === 'loaded'
   const errors = [permissionError, loadError, saveError].filter(Boolean)
   const identity = effectiveConfig?.identity || {}
+  const indieweb = effectiveConfig?.indieweb || {}
   const appearance = effectiveConfig?.appearance || {}
   const navigationItems = effectiveConfig?.navigation?.items || []
   const customFonts = Array.isArray(appearance.customFonts) ? appearance.customFonts : []
@@ -134,6 +135,17 @@ export function AdminPublicConfigCard() {
       <h3>Publication identity</h3>
       <p className="description">This name and identity are used by the masthead, footer, metadata, feeds and publication-facing admin controls. Product-only screens may still identify the software as Colophon.</p>
       <div className="campaign-admin-grid">{IDENTITY_FIELDS.map(([key, label, placeholder]) => <label key={key} className="native-content-editor__field"><span>{label}</span>{key === 'footerText' ? <textarea rows="2" value={identity[key] || ''} placeholder={placeholder} onChange={(event) => updateIdentity(key, event.target.value)} /> : <input type={key === 'contactEmail' ? 'email' : key.endsWith('Url') ? 'url' : 'text'} value={identity[key] || ''} placeholder={placeholder} onChange={(event) => updateIdentity(key, event.target.value)} />}</label>)}</div>
+    </div>
+
+    <div className="admin-public-config-card__identity admin-public-config-card__indieweb">
+      <h3>IndieWeb identity</h3>
+      <p className="description">Optional identity used for h-card and rel=me markup. No social platform is required.</p>
+      <div className="campaign-admin-grid">
+        <label className="native-content-editor__field"><span>Author / identity name</span><input value={indieweb.authorName || ''} onChange={(event) => updateIndieWeb({ authorName: event.target.value })} /></label>
+        <label className="native-content-editor__field"><span>Author / profile URL</span><input type="url" value={indieweb.authorUrl || ''} onChange={(event) => updateIndieWeb({ authorUrl: event.target.value })} placeholder="https://example.org/about" /></label>
+        <label className="native-content-editor__field"><span>Author photo URL</span><input value={indieweb.authorPhotoUrl || ''} onChange={(event) => updateIndieWeb({ authorPhotoUrl: event.target.value })} placeholder="/media/avatar.jpg or https://…" /></label>
+        <label className="native-content-editor__field"><span>rel=me URLs, one per line</span><textarea rows="4" value={(indieweb.relMe || []).join('\n')} onChange={(event) => updateIndieWeb({ relMe: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) })} placeholder={'https://social.example/@name\nhttps://github.com/name'} /></label>
+      </div>
     </div>
 
     <div className="admin-public-config-card__identity admin-public-config-card__navigation">

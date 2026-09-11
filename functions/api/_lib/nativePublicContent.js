@@ -136,6 +136,7 @@ export function normalizeNativeEntry(input) {
     slug: slugify(raw.slug || raw.title || raw.id || ''),
     excerpt: String(raw.excerpt || ''),
     body: String(raw.body || ''),
+    sourceFormat: ['html', 'markdown'].includes(String(raw.sourceFormat || '')) ? String(raw.sourceFormat) : 'html',
     richBody: Array.isArray(raw.richBody) ? raw.richBody : [],
     author: String(raw.author || ''),
     sourceType: String(raw.sourceType || 'manual'),

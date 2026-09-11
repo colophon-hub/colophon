@@ -74,3 +74,10 @@ The currently tested no-cost server path is based on Cloudflare Pages/Workers-st
 ## Privacy
 
 Browser-local mode does not create a Colophon account or upload publication content automatically. The browser build disables normal server analytics calls locally. External links or explicitly invoked network-backed tools can still contact the service they name, as expected.
+
+## Product-maturity features
+
+The browser/PWA edition supports Light / Dark / System interface appearance, Markdown authoring, syntax-highlighted code blocks, and declarative publication themes. The UI appearance choice is a device preference; publication themes remain part of publication configuration and portable backups.
+
+Browser-local mode still requires no Colophon account. TOTP/passkey account security and inbound Webmention receiving apply only after a publication is running on a reachable shared server.
+

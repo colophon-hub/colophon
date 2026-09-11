@@ -219,10 +219,12 @@ function renderNode(node, mode, key) {
     case 'hr':
       return <hr key={key} className="post-body__rule" />
 
-    case 'pre':
-      return (
-        <pre key={key} className="post-body__pre" dangerouslySetInnerHTML={{ __html: html }} />
-      )
+    case 'pre': {
+      const code = node.querySelector('code')
+      const classLanguage = Array.from(code?.classList || []).find((name) => name.startsWith('language-'))?.slice(9) || ''
+      const language = node.getAttribute('data-language') || code?.getAttribute('data-language') || classLanguage || 'text'
+      return <pre key={key} className="post-body__pre" data-language={language} dangerouslySetInnerHTML={{ __html: html }} />
+    }
 
     case 'iframe':
       return (
