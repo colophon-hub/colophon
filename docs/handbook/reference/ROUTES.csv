@@ -1,0 +1,54 @@
+scope,name,route
+public,Post,/post/:slug
+public,Archive,/archive
+public,Collections,/collections
+public,Collection,/collections/:slug
+public,Campaigns,/campaigns
+public,Campaign,/campaigns/:slug
+public,Investigations,/investigations
+public,Investigation,/investigations/:slug
+public,Courses,/courses
+public,Course,/courses/:slug
+public,Feeds,/feeds
+public,Gallery,/gallery
+public,Project,/project/:slug
+public,About,/about
+public,Security,/security
+public,Contact,/contact
+public,Support,/support
+public,Submit,/submit
+public,Print,/print/:slug
+public,Zine,/zine/:slug
+admin,Newsroom,/wp-admin
+admin,Posts,/wp-admin/posts
+admin,Add New,/wp-admin/add-new
+admin,Native editor,/wp-admin/native-bridge
+admin,Translations,/wp-admin/translations
+admin,Media,/wp-admin/media
+admin,Pages,/wp-admin/pages
+admin,Projects,/wp-admin/projects
+admin,Collections,/wp-admin/collections
+admin,Campaigns,/wp-admin/campaigns
+admin,Investigations,/wp-admin/investigations
+admin,Courses,/wp-admin/courses
+admin,Publications,/wp-admin/publications
+admin,Feeds,/wp-admin/feeds
+admin,PrintLab,/wp-admin/printlab
+admin,AudioLab,/wp-admin/audiolab
+admin,Customize,/wp-admin/customize
+admin,Live Editor,/wp-admin/live-editor
+admin,Tools,/wp-admin/tools
+admin,Site Health,/wp-admin/site-health
+admin,Backups,/wp-admin/system-backup
+admin,Audit Log,/wp-admin/audit-log
+admin,Analytics,/wp-admin/analytics
+admin,Taxonomy,/wp-admin/taxonomy
+admin,Roles,/wp-admin/roles
+admin,Platform Map,/wp-admin/platform-map
+admin,QA,/wp-admin/qa
+admin,Settings,/wp-admin/settings
+admin,Users,/wp-admin/users
+admin,Domains,/wp-admin/settings/domains
+admin,Podcasts,/wp-admin/podcasts
+admin,Podcast Settings,/wp-admin/podcasts/settings
+admin,Overrides,/wp-admin/overrides

@@ -1,0 +1,12 @@
+role,meaning,capabilities_or_scope
+owner,Full control including owners/account security,broad/full
+admin,Site operations and non-owner accounts,broad except owner boundaries
+editor,Create/edit/publish/manage media,editorial/publishing
+viewer,Read-only admin and analytics,read-only/analytics
+,Capability example,content:write
+,Capability example,media:write
+,Capability example,publishing:write
+,Capability example,site:manage
+,Capability example,analytics:view
+,Capability example,system:view
+,Capability example,users:manage

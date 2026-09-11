@@ -1,0 +1,10 @@
+id,label,purpose,included_in_presets
+articles,Articles,"Posts, pages, collections, taxonomy and editorial review",Simple Blog; Media Publication; Everything
+podcasts,Podcasts,"Podcast shows, episodes and feeds",Media Publication; Everything
+campaigns,Campaigns,"Campaign hubs, updates, resources and coverage",Everything
+investigations,Investigations,Living reporting/evidence hubs,Everything
+courses,Courses,Self-paced courses with local-first progress,Everything
+publications,Publications,"Zines, readers, editions and print collections",Everything
+translations,Translations,Translation workflow and language variants,Media Publication; Everything
+printlab,PrintLab,"Printable layouts, posters and PDF-oriented work",Everything
+audiolab,AudioLab,Audio editing and production tools,Everything

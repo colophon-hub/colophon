@@ -1,0 +1,4 @@
+runtime,records,media,accounts_required,operation,backup
+Browser/PWA,IndexedDB/browser-local DB,browser-local blobs,No,Local/offline-first,Portable .colophon
+Desktop,SQLite,filesystem media,No,Local/offline-first,Portable .colophon + automatic backups
+Server,D1 (supported architecture),R2-compatible object storage,Yes,Shared/self-hosted,Server snapshot + portable/full backup
