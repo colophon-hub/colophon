@@ -13,7 +13,7 @@ export function InvestigationRouteBoundary({ children }) {
   const location = useLocation()
   const path = location.pathname.replace(/\/+$/, '') || '/'
   if (path === '/wp-admin/investigations') {
-    return <PublishingModuleGate moduleId="investigations" disabledTo={adminRoutes.settings}><AdminAuthProvider><AdminNoticeProvider><ProtectedInvestigationAdmin /></AdminNoticeProvider></AdminAuthProvider></PublishingModuleGate>
+    return <PublishingModuleGate moduleId="investigations" disabledTo={adminRoutes.settings}><AdminAuthProvider><PublicEditProvider><AdminNoticeProvider><ProtectedInvestigationAdmin /></AdminNoticeProvider></PublicEditProvider></AdminAuthProvider></PublishingModuleGate>
   }
   if (path === '/investigations' || /^\/investigations\/[^/]+$/.test(path)) {
     return <PublishingModuleGate moduleId="investigations" disabledTo="/"><AdminAuthProvider><PublicEditProvider><AdminNoticeProvider><InvestigationPublicShell detail={path !== '/investigations'} /></AdminNoticeProvider></PublicEditProvider></AdminAuthProvider></PublishingModuleGate>

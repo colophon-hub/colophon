@@ -193,3 +193,131 @@ html[data-ui-theme="dark"] :where(hr) {
   gap: 1rem;
   margin: 1rem 0;
 }
+
+/* Admin dark-mode contrast. Most admin components already use these variables,
+   so switch the palette at the frame instead of fighting each legacy selector. */
+html[data-ui-theme="dark"] .admin-frame {
+  --admin-bg: #090b0d;
+  --admin-panel: #15191d;
+  --admin-border: #46525c;
+  --admin-border-soft: #38434c;
+  --admin-ink: #f0f3f5;
+  --admin-muted: #b9c3ca;
+  --admin-blue: #72aee6;
+  --admin-blue-dark: #9bd0ff;
+  --admin-red: #ff8a8a;
+  --admin-green: #6fd58a;
+  --admin-yellow: #f0c45c;
+}
+
+html[data-ui-theme="dark"] .investigation-admin,
+html[data-ui-theme="dark"] .investigation-admin__section,
+html[data-ui-theme="dark"] .investigation-admin__row,
+html[data-ui-theme="dark"] .investigation-admin__list button,
+html[data-ui-theme="dark"] .investigation-admin__savebar {
+  color: var(--admin-ink) !important;
+  border-color: var(--admin-border) !important;
+}
+
+html[data-ui-theme="dark"] .investigation-admin__savebar,
+html[data-ui-theme="dark"] .investigation-admin__section,
+html[data-ui-theme="dark"] .investigation-admin__row,
+html[data-ui-theme="dark"] .investigation-admin__list button {
+  background: var(--admin-panel) !important;
+}
+
+html[data-ui-theme="dark"] .investigation-admin__field :where(input, select, textarea),
+html[data-ui-theme="dark"] .investigation-admin__savebar button,
+html[data-ui-theme="dark"] .investigation-admin__header-actions button,
+html[data-ui-theme="dark"] .investigation-admin__section > button {
+  background: #0f1316 !important;
+  color: var(--admin-ink) !important;
+  border-color: #53616c !important;
+}
+
+html[data-ui-theme="dark"] .investigation-admin :where(h1, h2, h3, h4, strong, label, legend) {
+  color: var(--admin-ink) !important;
+}
+
+html[data-ui-theme="dark"] .investigation-admin :where(.investigation-admin__header p, .investigation-admin__list span, .investigation-admin__savebar span) {
+  color: var(--admin-muted) !important;
+}
+
+/* Keep the classic editor action strip compact. The Markdown controls added a
+   fourth cluster to a row whose older flex rules were allowed to squeeze and wrap. */
+.wp-edit-screen .native-content-editor__media-row {
+  min-height: 0 !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  padding: 6px 8px !important;
+}
+
+.wp-edit-screen .native-content-editor__media-row > .button,
+.wp-edit-screen .native-content-editor__media-row > label.button {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  font-size: 13px !important;
+  line-height: 30px !important;
+  white-space: nowrap !important;
+}
+
+.wp-edit-screen .native-content-editor__media-row .native-content-editor__tabs {
+  flex: 1 1 270px !important;
+  min-width: 0 !important;
+  justify-content: flex-end !important;
+  margin-left: auto !important;
+}
+
+.wp-edit-screen .native-content-editor__media-row .native-content-editor__tabs .button {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  margin: 0 0 -1px 4px !important;
+  padding: 0 10px !important;
+  font-size: 13px !important;
+  line-height: 30px !important;
+  white-space: nowrap !important;
+}
+
+html[data-ui-theme="dark"] .wp-edit-screen .native-content-editor__chrome,
+html[data-ui-theme="dark"] .wp-edit-screen .native-content-editor__media-row,
+html[data-ui-theme="dark"] .wp-classic-toolbar {
+  background: #15191d !important;
+  color: #f0f3f5 !important;
+  border-color: #46525c !important;
+}
+
+html[data-ui-theme="dark"] .wp-edit-screen .native-content-editor__media-row .button,
+html[data-ui-theme="dark"] .wp-edit-screen .native-content-editor__tabs .button,
+html[data-ui-theme="dark"] .wp-classic-toolbar .button,
+html[data-ui-theme="dark"] .wp-classic-toolbar select {
+  background: #222a30 !important;
+  color: #f0f3f5 !important;
+  border-color: #53616c !important;
+}
+
+html[data-ui-theme="dark"] .wp-edit-screen .native-content-editor__tabs .button--primary {
+  background: #0f1316 !important;
+  color: #ffffff !important;
+  border-color: #6b7a86 !important;
+}
+
+@media (max-width: 760px) {
+  .wp-edit-screen .native-content-editor__media-row .native-content-editor__tabs {
+    flex-basis: 100% !important;
+    justify-content: flex-start !important;
+    margin-left: 0 !important;
+  }
+
+  .wp-edit-screen .native-content-editor__media-row .native-content-editor__tabs .button:first-child {
+    margin-left: 0 !important;
+  }
+}
+

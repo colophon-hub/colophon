@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { isLocalRuntime } from '../lib/runtime'
 
 async function request(url, init) {
   const response = await fetch(url, { credentials: 'same-origin', ...init })
@@ -80,16 +81,20 @@ export function CampaignSignatures({ campaign }) {
 }
 
 export function CampaignSignaturesAdmin({ campaign }) {
+  const local = isLocalRuntime()
   const [form, setForm] = useState({ enabled: false, title: 'Sign', intro: '', config: { allowIndividuals: true, allowOrganizations: true, showAffiliation: true, allowStatement: true } })
   const [items, setItems] = useState([])
   const [selected, setSelected] = useState(() => new Set())
   const [notice, setNotice] = useState('')
 
   async function load() {
-    if (!campaign?.id) return
+    if (!campaign?.id || local) return
     try { const next = await request(`/api/campaign-signatures?action=queue&campaign=${encodeURIComponent(campaign.id)}`); if (next.form) setForm(next.form); setItems(next.items || []); setSelected(new Set()) } catch (error) { setNotice(error.message) }
   }
-  useEffect(() => { load() }, [campaign?.id])
+  useEffect(() => { load() }, [campaign?.id, local])
+
+  if (!campaign?.id) return null
+  if (local) return <section className="wp-meta-box"><h2>Verified campaign signatures</h2><p className="description">Email-verified public signing is available on shared/server installations. Local publications can still use the campaign's static signatory list.</p></section>
 
   async function configure() {
     try { const next = await request('/api/campaign-signatures?action=configure', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ campaign: campaign.id, form }) }); setForm(next.form); setNotice('Signing settings saved.') } catch (error) { setNotice(error.message) }
