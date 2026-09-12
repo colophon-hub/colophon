@@ -1,18 +1,18 @@
 import { databaseUnavailable, getBoundDb } from './_lib/database.js'
 import { inferActorFromRequest, writeAuditLog } from './_lib/auditLog.js'
-import { decorateAiCampaignForPublic } from './_lib/aiCampaignPublic.js'
-import { ensureAiCampaign, getCampaign } from './_lib/campaigns.js'
+import { loadCampaignAutomation } from './_lib/campaignAutomation.js'
+import { getCampaign } from './_lib/campaigns.js'
 import { resolvePublicSitePermission } from './_lib/publicSiteAuth.js'
 import {
-  AI_COVERAGE_CAMPAIGN,
   COVERAGE_EDITORIAL_STATUSES,
-  ensureAiCoverageArchiveTables,
-  getAiCoverageArchiveSummary,
-  listAiCoverageArchive,
-  refreshGdeltCoverageIfStale,
+  ensureCampaignCoverageArchiveTables,
+  getCampaignCoverageArchiveSummary,
+  listCampaignCoverageArchive,
   updateCoverageEditorialState,
-  upsertAiCoverageItems,
-} from './_lib/aiCampaignCoverageArchive.js'
+  upsertCampaignCoverageItems,
+} from './_lib/campaignCoverageArchive.js'
+
+const DEFAULT_CAMPAIGN_SLUG = 'example-campaign'
 
 export async function onRequestOptions() {
   return json({ ok: true, mode: 'd1', methods: ['GET', 'PATCH'] })
@@ -23,9 +23,9 @@ export async function onRequestGet(context) {
     const db = getBoundDb(context)
     if (!db) return databaseUnavailable('campaign coverage archive reads')
     const url = new URL(context.request.url)
-    const campaignSlug = String(url.searchParams.get('campaign') || AI_COVERAGE_CAMPAIGN)
-    const campaign = campaignSlug === AI_COVERAGE_CAMPAIGN ? await ensureAiCampaign(db) : await getCampaign(db, campaignSlug)
-    if (!campaign) return json({ ok: false, error: 'campaign not found' }, 404)
+    const campaignSlug = String(url.searchParams.get('campaign') || url.searchParams.get('slug') || DEFAULT_CAMPAIGN_SLUG).trim()
+    const campaign = await getCampaign(db, campaignSlug)
+    if (!campaign || campaign.status !== 'published') return json({ ok: false, error: 'campaign not found' }, 404)
     const adminView = url.searchParams.get('admin') === '1'
     let permission = null
     if (adminView) {
@@ -33,30 +33,20 @@ export async function onRequestGet(context) {
       if (!permission.canEdit) return json({ ok: false, error: permission.reason || 'authentication required', canEdit: false }, 403, true)
     }
 
-    await ensureAiCoverageArchiveTables(db)
-    let summary = await getAiCoverageArchiveSummary(db, campaignSlug, { includeHidden: adminView })
-    if (campaignSlug === AI_COVERAGE_CAMPAIGN && (summary.total === 0 || url.searchParams.get('refresh') === '1')) {
-      const seededCampaign = await ensureAiCampaign(db)
-      const publicCampaign = await decorateAiCampaignForPublic(seededCampaign, context.request.url, { includeSocial: false })
-      await upsertAiCoverageItems(db, publicCampaign.coverage || [])
-      summary = await getAiCoverageArchiveSummary(db, campaignSlug, { includeHidden: adminView })
-    } else if (summary.total === 0 && Array.isArray(campaign.coverage) && campaign.coverage.length) {
-      await upsertAiCoverageItems(db, campaign.coverage, { campaignSlug })
-      summary = await getAiCoverageArchiveSummary(db, campaignSlug, { includeHidden: adminView })
+    await ensureCampaignCoverageArchiveTables(db)
+    let summary = await getCampaignCoverageArchiveSummary(db, campaign.slug, { includeHidden: adminView })
+    const forceRefresh = url.searchParams.get('refresh') === '1'
+    if (summary.total === 0 || forceRefresh) {
+      await refreshCampaignCoverageArchive(db, campaign, context.request.url)
+      summary = await getCampaignCoverageArchiveSummary(db, campaign.slug, { includeHidden: adminView })
+    } else if (campaign.automation?.enabled) {
+      const refreshPromise = refreshCampaignCoverageArchive(db, campaign, context.request.url)
+      if (typeof context.waitUntil === 'function') context.waitUntil(refreshPromise.catch(() => {}))
+      else refreshPromise.catch(() => {})
     }
 
-    const refreshPromise = campaignSlug === AI_COVERAGE_CAMPAIGN ? refreshGdeltCoverageIfStale(db) : Promise.resolve({ refreshed: false, reason: 'not-configured' })
-    if (url.searchParams.get('refresh') === '1' && campaignSlug === AI_COVERAGE_CAMPAIGN) {
-      await refreshPromise
-      summary = await getAiCoverageArchiveSummary(db, campaignSlug, { includeHidden: adminView })
-    } else if (typeof context.waitUntil === 'function') {
-      context.waitUntil(refreshPromise.catch(() => {}))
-    } else {
-      refreshPromise.catch(() => {})
-    }
-
-    const archive = await listAiCoverageArchive(db, {
-      campaignSlug,
+    const archive = await listCampaignCoverageArchive(db, {
+      campaignSlug: campaign.slug,
       q: url.searchParams.get('q'),
       language: url.searchParams.get('language'),
       outlet: url.searchParams.get('outlet'),
@@ -87,16 +77,23 @@ export async function onRequestPatch(context) {
     const campaign = await getCampaign(db, campaignSlug)
     if (!campaign) return json({ ok: false, error: 'campaign not found' }, 404, true)
     const actor = permission.actor || inferActorFromRequest(context.request)
-    const item = await updateCoverageEditorialState(db, { id, campaignSlug, editorialStatus, editorialNote: body?.editorialNote, actor })
+    const item = await updateCoverageEditorialState(db, { id, campaignSlug: campaign.slug, editorialStatus, editorialNote: body?.editorialNote, actor })
     if (!item) return json({ ok: false, error: 'coverage item not found' }, 404, true)
     await writeAuditLog(db, {
       action: 'campaign-coverage.editorial-update', entityType: 'campaign-coverage', entityId: item.id,
-      actor, detail: { campaignSlug, editorialStatus, hasEditorialNote: Boolean(item.editorialNote) },
+      actor, detail: { campaignSlug: campaign.slug, editorialStatus, hasEditorialNote: Boolean(item.editorialNote) },
     })
     return json({ ok: true, mode: 'd1', item }, 200, true)
   } catch (error) {
     return json({ ok: false, error: String(error?.message || error) }, 400, true)
   }
+}
+
+async function refreshCampaignCoverageArchive(db, campaign, requestUrl) {
+  await upsertCampaignCoverageItems(db, campaign.coverage || [], { campaignSlug: campaign.slug, source: 'campaign' })
+  if (!campaign.automation?.enabled) return
+  const automation = await loadCampaignAutomation(campaign, requestUrl)
+  await upsertCampaignCoverageItems(db, automation.coverage || [], { campaignSlug: campaign.slug, source: 'campaign-automation' })
 }
 
 function json(data, status = 200, privateResponse = false) {

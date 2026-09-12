@@ -1,4 +1,3 @@
-import { loadLiveAiSocial } from './_lib/aiCampaignPublic.js'
 import { loadCampaignAutomation } from './_lib/campaignAutomation.js'
 import { getBoundDb } from './_lib/database.js'
 import { getCampaign } from './_lib/campaigns.js'
@@ -6,7 +5,6 @@ import { getCampaign } from './_lib/campaigns.js'
 export async function onRequestGet(context) {
   const slug = new URL(context.request.url).searchParams.get('slug') || 'example-campaign'
   try {
-    if (slug === 'example-campaign') return json(await loadLiveAiSocial(context.request.url), 200, 'public, max-age=60, s-maxage=300, stale-while-revalidate=600')
     const db = getBoundDb(context)
     if (!db) return json({ ok: false, error: 'Campaign data unavailable' }, 503)
     const campaign = await getCampaign(db, slug)

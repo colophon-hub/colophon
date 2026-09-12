@@ -1,9 +1,8 @@
 import { getBoundDb } from '../api/_lib/database.js'
 import { buildLiveFeedBundle, normalizeFeedRequestPath } from '../api/_lib/feedRuntime.js'
 import { findPodcastShow, readPodcastShows } from '../api/_lib/podcastSettings.js'
-import { AI_CAMPAIGN_SLUG, buildCampaignRssXml, ensureDefaultCampaigns, getCampaign } from '../api/_lib/campaigns.js'
+import { buildCampaignRssXml, ensureDefaultCampaigns, getCampaign } from '../api/_lib/campaigns.js'
 import { listMessages } from '../api/_lib/campaignCorrespondence.js'
-import { decorateAiCampaignForPublic } from '../api/_lib/aiCampaignPublic.js'
 import { decorateCampaignAutomation } from '../api/_lib/campaignAutomation.js'
 import { listNativeEntries } from '../api/_lib/nativePublicContent.js'
 import { buildPodcastFeedXml, getPodcastFeedItems, podcastXmlResponse } from '../rss/podcast.xml.js'
@@ -53,11 +52,7 @@ export async function onRequestGet(context) {
       let campaign = await getCampaign(db, slug)
       if (!campaign || campaign.status !== 'published') return text('Campaign feed not found.', 404)
       const posts = await listNativeEntries(db, { status: 'published' })
-      if (slug === AI_CAMPAIGN_SLUG) {
-        campaign = await decorateAiCampaignForPublic(campaign, context.request.url, { posts, includeSocial: false })
-      } else {
-        campaign = await decorateCampaignAutomation(campaign, context.request.url, { posts })
-      }
+      campaign = await decorateCampaignAutomation(campaign, context.request.url, { posts })
       const dispatches = campaign.correspondence?.enabled ? await listMessages(db, campaign.id, { publicOnly: true }) : []
       return new Response(buildCampaignRssXml({ campaign, requestUrl: context.request.url, dispatches }), {
         status: 200,
