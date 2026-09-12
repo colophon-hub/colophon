@@ -9,6 +9,10 @@
   "desktopName": "Colophon",
   "type": "module",
   "main": "desktop/main.mjs",
+  "exports": {
+    ".": "./desktop/main.mjs",
+    "./workspace": "./src/ColophonWorkspace.jsx"
+  },
   "scripts": {
     "dev": "vite",
     "dev:pwa": "vite --mode browser-local",
