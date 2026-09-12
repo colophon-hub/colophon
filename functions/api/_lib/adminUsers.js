@@ -4,13 +4,14 @@ export const PASSWORD_ITERATIONS = 100_000
 const MAX_PASSWORD_ITERATIONS = 100_000
 const PASSWORD_MIN_LENGTH = 12
 
-export const ADMIN_USER_ROLES = Object.freeze(['owner', 'admin', 'editor', 'viewer'])
+export const ADMIN_USER_ROLES = Object.freeze(['owner', 'admin', 'editor', 'contributor', 'viewer'])
 export const ADMIN_USER_STATUSES = Object.freeze(['active', 'disabled'])
 
 const ROLE_CAPABILITIES = Object.freeze({
   owner: ['*'],
-  admin: ['content:write', 'media:write', 'publishing:write', 'site:manage', 'analytics:view', 'system:view', 'users:manage'],
-  editor: ['content:write', 'media:write', 'publishing:write', 'analytics:view'],
+  admin: ['content:write', 'media:write', 'publishing:write', 'review:manage', 'review:comment', 'site:manage', 'analytics:view', 'system:view', 'users:manage'],
+  editor: ['content:write', 'media:write', 'publishing:write', 'review:manage', 'review:comment', 'analytics:view'],
+  contributor: ['content:write', 'media:write', 'review:comment'],
   viewer: ['analytics:view'],
 })
 
@@ -65,9 +66,7 @@ export function canAccessAdmin(identity) {
 
 export function validatePassword(password) {
   const value = String(password || '')
-  if (value.length < PASSWORD_MIN_LENGTH) {
-    return { ok: false, error: `password must be at least ${PASSWORD_MIN_LENGTH} characters` }
-  }
+  if (value.length < PASSWORD_MIN_LENGTH) return { ok: false, error: `password must be at least ${PASSWORD_MIN_LENGTH} characters` }
   if (value.length > 512) return { ok: false, error: 'password is too long' }
   return { ok: true }
 }
@@ -76,24 +75,9 @@ export async function hashPassword(password, saltInput = '') {
   const validity = validatePassword(password)
   if (!validity.ok) throw new Error(validity.error)
   const saltBytes = saltInput ? base64ToBytes(saltInput) : randomBytes(16)
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(String(password)),
-    'PBKDF2',
-    false,
-    ['deriveBits'],
-  )
-  const bits = await crypto.subtle.deriveBits({
-    name: 'PBKDF2',
-    hash: 'SHA-256',
-    salt: saltBytes,
-    iterations: PASSWORD_ITERATIONS,
-  }, keyMaterial, 256)
-  return {
-    hash: bytesToBase64(new Uint8Array(bits)),
-    salt: bytesToBase64(saltBytes),
-    iterations: PASSWORD_ITERATIONS,
-  }
+  const keyMaterial = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(password)), 'PBKDF2', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: saltBytes, iterations: PASSWORD_ITERATIONS }, keyMaterial, 256)
+  return { hash: bytesToBase64(new Uint8Array(bits)), salt: bytesToBase64(saltBytes), iterations: PASSWORD_ITERATIONS }
 }
 
 export async function verifyPassword(password, user) {
@@ -101,23 +85,10 @@ export async function verifyPassword(password, user) {
   const iterations = Number(user.password_iterations || PASSWORD_ITERATIONS)
   if (!Number.isInteger(iterations) || iterations < 1 || iterations > MAX_PASSWORD_ITERATIONS) return false
   try {
-    const keyMaterial = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(String(password || '')),
-      'PBKDF2',
-      false,
-      ['deriveBits'],
-    )
-    const bits = await crypto.subtle.deriveBits({
-      name: 'PBKDF2',
-      hash: 'SHA-256',
-      salt: base64ToBytes(user.password_salt),
-      iterations,
-    }, keyMaterial, 256)
+    const keyMaterial = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(password || '')), 'PBKDF2', false, ['deriveBits'])
+    const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: base64ToBytes(user.password_salt), iterations }, keyMaterial, 256)
     return timingSafeBytesEqual(new Uint8Array(bits), base64ToBytes(user.password_hash))
-  } catch {
-    return false
-  }
+  } catch { return false }
 }
 
 export async function getAdminUserByEmail(db, email) {
@@ -136,7 +107,7 @@ export async function getAdminUserById(db, id) {
 export async function listAdminUsers(db) {
   await ensureAdminUsersTable(db)
   const result = await db.prepare(`SELECT id, email, display_name, role, status, created_at, updated_at, last_login_at
-    FROM admin_users ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'editor' THEN 2 ELSE 3 END, email COLLATE NOCASE ASC`).all()
+    FROM admin_users ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'editor' THEN 2 WHEN 'contributor' THEN 3 ELSE 4 END, email COLLATE NOCASE ASC`).all()
   return (result?.results || []).map(publicUser)
 }
 
@@ -165,9 +136,7 @@ export async function createAdminUser(db, input = {}) {
   const now = new Date().toISOString()
   await db.prepare(`INSERT INTO admin_users (
     id, email, display_name, password_hash, password_salt, password_iterations, role, status, created_at, updated_at
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
-    id, email, displayName, credentials.hash, credentials.salt, credentials.iterations, role, status, now, now,
-  ).run()
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, email, displayName, credentials.hash, credentials.salt, credentials.iterations, role, status, now, now).run()
   return publicUser(await getAdminUserById(db, id))
 }
 
@@ -176,9 +145,7 @@ export async function updateAdminUser(db, id, patch = {}) {
   const existing = await getAdminUserById(db, id)
   if (!existing) throw new Error('user not found')
   const email = Object.prototype.hasOwnProperty.call(patch, 'email') ? normalizeEmail(patch.email) : existing.email
-  const displayName = Object.prototype.hasOwnProperty.call(patch, 'displayName')
-    ? String(patch.displayName || '').trim().slice(0, 160)
-    : existing.display_name
+  const displayName = Object.prototype.hasOwnProperty.call(patch, 'displayName') ? String(patch.displayName || '').trim().slice(0, 160) : existing.display_name
   const role = Object.prototype.hasOwnProperty.call(patch, 'role') ? normalizeRole(patch.role, existing.role) : existing.role
   const status = Object.prototype.hasOwnProperty.call(patch, 'status') ? normalizeStatus(patch.status, existing.status) : existing.status
   if (!email || !email.includes('@')) throw new Error('valid email is required')
@@ -212,8 +179,7 @@ export async function deleteAdminUser(db, id) {
 export async function markAdminUserLogin(db, id) {
   if (!id) return
   await ensureAdminUsersTable(db)
-  await db.prepare('UPDATE admin_users SET last_login_at = ?, updated_at = updated_at WHERE id = ?')
-    .bind(new Date().toISOString(), String(id)).run()
+  await db.prepare('UPDATE admin_users SET last_login_at = ?, updated_at = updated_at WHERE id = ?').bind(new Date().toISOString(), String(id)).run()
 }
 
 export function publicUser(row) {
@@ -232,34 +198,8 @@ export function publicUser(row) {
   }
 }
 
-function randomBytes(length) {
-  const bytes = new Uint8Array(length)
-  crypto.getRandomValues(bytes)
-  return bytes
-}
-
-function randomHex(length) {
-  return [...randomBytes(length)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
-}
-
-function bytesToBase64(bytes) {
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
-}
-
-function base64ToBytes(value) {
-  const binary = atob(String(value || ''))
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
-  return bytes
-}
-
-function timingSafeBytesEqual(left, right) {
-  const a = left || new Uint8Array()
-  const b = right || new Uint8Array()
-  let diff = a.length ^ b.length
-  const length = Math.max(a.length, b.length)
-  for (let index = 0; index < length; index += 1) diff |= (a[index] || 0) ^ (b[index] || 0)
-  return diff === 0
-}
+function randomBytes(length) { const bytes = new Uint8Array(length); crypto.getRandomValues(bytes); return bytes }
+function randomHex(length) { return [...randomBytes(length)].map((byte) => byte.toString(16).padStart(2, '0')).join('') }
+function bytesToBase64(bytes) { let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary) }
+function base64ToBytes(value) { const binary = atob(String(value || '')); const bytes = new Uint8Array(binary.length); for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index); return bytes }
+function timingSafeBytesEqual(left, right) { const a = left || new Uint8Array(); const b = right || new Uint8Array(); let diff = a.length ^ b.length; const length = Math.max(a.length, b.length); for (let index = 0; index < length; index += 1) diff |= (a[index] || 0) ^ (b[index] || 0); return diff === 0 }
