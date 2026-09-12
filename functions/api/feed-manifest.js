@@ -1,6 +1,6 @@
 import { databaseUnavailable, getBoundDb } from './_lib/database.js'
 import { buildLiveFeedBundle } from './_lib/feedRuntime.js'
-import { ensureAiCampaign, listCampaigns } from './_lib/campaigns.js'
+import { ensureDefaultCampaigns, listCampaigns } from './_lib/campaigns.js'
 import { readPodcastShows } from './_lib/podcastSettings.js'
 import { getPodcastFeedItems } from '../rss/podcast.xml.js'
 
@@ -9,7 +9,7 @@ export async function onRequestGet(context) {
     const db = getBoundDb(context)
     if (!db) return databaseUnavailable('live feed manifest')
 
-    await ensureAiCampaign(db)
+    await ensureDefaultCampaigns(db)
     const [runtime, podcastItems, podcastRegistry, campaigns] = await Promise.all([
       buildLiveFeedBundle(db),
       getPodcastFeedItems(db),
