@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getPieces } from '../lib/pieces'
-import { createNativeEntryFromImportedPiece, loadNativeCollection, slugify, upsertNativeEntry, saveNativeCollection } from '../lib/nativePublicContent'
+import { createNativeEntryFromImportedPiece, deleteNativeEntry, loadNativeCollection, slugify, upsertNativeEntry } from '../lib/nativePublicContent'
 import { AdminFrame } from './AdminRail'
 import { WpAdminNotices, useAdminNotices } from './WpAdminNotices'
 import { adminRoutes } from '../routing/routes'
@@ -64,6 +64,7 @@ export function ContentListPage() {
     const q = query.toLowerCase()
     return allRows.filter((item) => {
       const bucket = getBucket(item)
+      if (tab === 'all' && bucket === 'trash') return false
       if (tab !== 'all' && bucket !== tab) return false
       if (categoryFilter !== 'all' && !(item.projects || item.categories || []).includes(categoryFilter)) return false
       return !q || [
@@ -107,34 +108,58 @@ export function ContentListPage() {
     pushNotice('Post saved.', 'success')
   }
 
+  async function permanentlyDelete(id) {
+    const next = await deleteNativeEntry(items, id)
+    setItems(next)
+    setSelectedIds((current) => current.filter((value) => value !== id))
+    pushNotice('Post deleted permanently.', 'success')
+  }
+
+  async function emptyTrash() {
+    let next = items
+    const trashIds = next.filter((item) => item.status === 'trash').map((item) => item.id)
+    for (const id of trashIds) next = await deleteNativeEntry(next, id)
+    setItems(next)
+    setSelectedIds([])
+    pushNotice(trashIds.length ? 'Trash emptied.' : 'Trash is already empty.', 'success')
+  }
+
+  function formatPostDate(value) {
+    if (!value) return '—'
+    const date = new Date(value)
+    return Number.isFinite(date.getTime()) ? date.toLocaleDateString() : '—'
+  }
+
   async function applyBulkAction() {
     if (!bulkAction) return
     if (bulkAction !== 'empty-trash' && !selectedIds.length) return
-    if (bulkAction === 'trash') {
-      let next = items
-      for (const id of selectedIds) {
-        const row = next.find((item) => item.id === id)
-        if (!row) continue
-        next = await upsertNativeEntry(next, { ...row, status: 'trash', workflowState: 'draft' }, 'bulk trash')
+    try {
+      if (bulkAction === 'trash') {
+        let next = items
+        for (const id of selectedIds) {
+          const row = next.find((item) => item.id === id)
+          if (!row) continue
+          next = await upsertNativeEntry(next, { ...row, status: 'trash', workflowState: 'trash' }, 'bulk trash')
+        }
+        setItems(next)
+        pushNotice('Selected posts moved to Trash.', 'warning')
       }
-      setItems(next)
-    }
-    if (bulkAction === 'restore') {
-      let next = items
-      for (const id of selectedIds) {
-        const row = next.find((item) => item.id === id)
-        if (!row) continue
-        next = await upsertNativeEntry(next, { ...row, status: 'draft', workflowState: 'draft' }, 'bulk restore')
+      if (bulkAction === 'restore') {
+        let next = items
+        for (const id of selectedIds) {
+          const row = next.find((item) => item.id === id)
+          if (!row) continue
+          next = await upsertNativeEntry(next, { ...row, status: 'draft', workflowState: 'draft' }, 'bulk restore')
+        }
+        setItems(next)
+        pushNotice('Selected posts restored.', 'success')
       }
-      setItems(next)
+      if (bulkAction === 'empty-trash') await emptyTrash()
+      setSelectedIds([])
+      setBulkAction('')
+    } catch (error) {
+      pushNotice(`Bulk action failed: ${String(error?.message || error)}`, 'error')
     }
-    if (bulkAction === 'empty-trash') {
-      const next = saveNativeCollection(items.filter((item) => item.status !== 'trash'))
-      setItems(next)
-      pushNotice('Post moved to Trash.', 'warning')
-    }
-    setSelectedIds([])
-    setBulkAction('')
   }
 
   return (
@@ -162,7 +187,7 @@ export function ContentListPage() {
               </select>
               <button type="button" className="button" onClick={applyBulkAction}>Apply</button>
               {tab === 'trash' ? (
-                <button type="button" className="button" onClick={() => setItems(saveNativeCollection(items.filter((item) => item.status !== 'trash')))} disabled={trashCount === 0}>Empty Trash</button>
+                <button type="button" className="button" onClick={() => emptyTrash().catch((error) => pushNotice(`Empty Trash failed: ${String(error?.message || error)}`, 'error'))} disabled={trashCount === 0}>Empty Trash</button>
               ) : null}
               <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}><option value="all">All categories</option>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select>
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search Posts" />
@@ -192,14 +217,35 @@ export function ContentListPage() {
                         <Link to={item.isImportedArchive ? `${adminRoutes.nativeBridge}?import=${item.importSlug || item.slug}` : `${adminRoutes.nativeBridge}?edit=${item.id}`}>Edit</Link>
                         {item.isImportedArchive ? null : <button type="button" onClick={() => { setQuickEditId(item.id); setQuickEdit({ title: item.title || '', slug: item.slug || '', status: item.status || 'draft', tags: (item.tags || []).join(', '), categories: (item.categories || item.projects || []).join(', '), collections: (item.collections || []).join(', ') }) }}>Quick Edit</button>}
                         {item.status === 'published' ? <Link to={`/post/${item.slug}`}>View</Link> : null}
-                        {item.isImportedArchive ? <span>Imported archive</span> : item.status !== 'trash' ? <button type="button" onClick={async () => { setItems(await upsertNativeEntry(items, { ...item, status: 'trash' }, 'trash')); pushNotice('Post moved to Trash.', 'warning') }}>Trash</button> : <button type="button" onClick={async () => setItems(await upsertNativeEntry(items, { ...item, status: 'draft' }, 'restore'))}>Restore</button>}
+                        {item.isImportedArchive ? <span>Imported archive</span> : item.status !== 'trash' ? (
+                          <button type="button" onClick={async () => {
+                            try {
+                              setItems(await upsertNativeEntry(items, { ...item, status: 'trash', workflowState: 'trash' }, 'trash'))
+                              pushNotice('Post moved to Trash.', 'warning')
+                            } catch (error) {
+                              pushNotice(`Trash failed: ${String(error?.message || error)}`, 'error')
+                            }
+                          }}>Trash</button>
+                        ) : (
+                          <>
+                            <button type="button" onClick={async () => {
+                              try {
+                                setItems(await upsertNativeEntry(items, { ...item, status: 'draft', workflowState: 'draft' }, 'restore'))
+                                pushNotice('Post restored.', 'success')
+                              } catch (error) {
+                                pushNotice(`Restore failed: ${String(error?.message || error)}`, 'error')
+                              }
+                            }}>Restore</button>
+                            <button type="button" className="wp-row-action-delete" onClick={() => permanentlyDelete(item.id).catch((error) => pushNotice(`Delete failed: ${String(error?.message || error)}`, 'error'))}>Delete Permanently</button>
+                          </>
+                        )}
                       </div>
                     </td>
                     <td>{item.isImportedArchive ? 'published / imported' : item.status || item.workflowState || 'draft'}</td>
                     <td>{item.author || 'colophon-hub'}</td>
                     <td>{(item.projects || item.categories || ['Uncategorized']).join(', ')}</td>
                     <td>{(item.tags || []).join(', ') || '—'}</td>
-                    <td>{(item.publishedAt || item.updatedAt) ? new Date(item.publishedAt || item.updatedAt).toLocaleDateString() : '—'}</td>
+                    <td>{formatPostDate(item.publishedAt || item.updatedAt)}</td>
                   </tr>
                   {quickEditId === item.id ? (
                     <tr className="wp-quick-edit-row" key={`${item.id}-qe`}>
