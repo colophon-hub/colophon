@@ -108,20 +108,64 @@ export function ContentListPage() {
     pushNotice('Post saved.', 'success')
   }
 
+  async function reconcileItems(fallback = items) {
+    try {
+      const loaded = await loadNativeCollection({ includeFuture: 1 })
+      const authoritative = Array.isArray(loaded) ? loaded : fallback
+      setItems(authoritative)
+      return authoritative
+    } catch {
+      setItems(fallback)
+      return fallback
+    }
+  }
+
+  async function updatePostStatus(item, status, revisionNote) {
+    const workflowState = status === 'trash' ? 'trash' : 'draft'
+    const optimistic = items.map((row) => row.id === item.id ? { ...row, status, workflowState } : row)
+    setItems(optimistic)
+    try {
+      const next = await upsertNativeEntry(items, { ...item, status, workflowState }, revisionNote)
+      return await reconcileItems(next)
+    } catch (error) {
+      await reconcileItems(items)
+      throw error
+    }
+  }
+
   async function permanentlyDelete(id) {
-    const next = await deleteNativeEntry(items, id)
-    setItems(next)
-    setSelectedIds((current) => current.filter((value) => value !== id))
-    pushNotice('Post deleted permanently.', 'success')
+    const optimistic = items.filter((item) => item.id !== id && item.slug !== id)
+    setItems(optimistic)
+    try {
+      const next = await deleteNativeEntry(items, id)
+      await reconcileItems(next)
+      setSelectedIds((current) => current.filter((value) => value !== id))
+      pushNotice('Post deleted permanently.', 'success')
+    } catch (error) {
+      await reconcileItems(items)
+      throw error
+    }
   }
 
   async function emptyTrash() {
+    const trashIds = items.filter((item) => item.status === 'trash').map((item) => item.id)
+    if (!trashIds.length) {
+      pushNotice('Trash is already empty.', 'success')
+      return
+    }
+    const trashSet = new Set(trashIds)
+    const optimistic = items.filter((item) => !trashSet.has(item.id))
+    setItems(optimistic)
     let next = items
-    const trashIds = next.filter((item) => item.status === 'trash').map((item) => item.id)
-    for (const id of trashIds) next = await deleteNativeEntry(next, id)
-    setItems(next)
-    setSelectedIds([])
-    pushNotice(trashIds.length ? 'Trash emptied.' : 'Trash is already empty.', 'success')
+    try {
+      for (const id of trashIds) next = await deleteNativeEntry(next, id)
+      await reconcileItems(next)
+      setSelectedIds([])
+      pushNotice('Trash emptied.', 'success')
+    } catch (error) {
+      await reconcileItems(items)
+      throw error
+    }
   }
 
   function formatPostDate(value) {
@@ -135,24 +179,38 @@ export function ContentListPage() {
     if (bulkAction !== 'empty-trash' && !selectedIds.length) return
     try {
       if (bulkAction === 'trash') {
+        const selected = new Set(selectedIds)
+        setItems((current) => current.map((item) => selected.has(item.id) ? { ...item, status: 'trash', workflowState: 'trash' } : item))
         let next = items
-        for (const id of selectedIds) {
-          const row = next.find((item) => item.id === id)
-          if (!row) continue
-          next = await upsertNativeEntry(next, { ...row, status: 'trash', workflowState: 'trash' }, 'bulk trash')
+        try {
+          for (const id of selectedIds) {
+            const row = next.find((item) => item.id === id)
+            if (!row) continue
+            next = await upsertNativeEntry(next, { ...row, status: 'trash', workflowState: 'trash' }, 'bulk trash')
+          }
+          await reconcileItems(next)
+          pushNotice('Selected posts moved to Trash.', 'warning')
+        } catch (error) {
+          await reconcileItems(items)
+          throw error
         }
-        setItems(next)
-        pushNotice('Selected posts moved to Trash.', 'warning')
       }
       if (bulkAction === 'restore') {
+        const selected = new Set(selectedIds)
+        setItems((current) => current.map((item) => selected.has(item.id) ? { ...item, status: 'draft', workflowState: 'draft' } : item))
         let next = items
-        for (const id of selectedIds) {
-          const row = next.find((item) => item.id === id)
-          if (!row) continue
-          next = await upsertNativeEntry(next, { ...row, status: 'draft', workflowState: 'draft' }, 'bulk restore')
+        try {
+          for (const id of selectedIds) {
+            const row = next.find((item) => item.id === id)
+            if (!row) continue
+            next = await upsertNativeEntry(next, { ...row, status: 'draft', workflowState: 'draft' }, 'bulk restore')
+          }
+          await reconcileItems(next)
+          pushNotice('Selected posts restored.', 'success')
+        } catch (error) {
+          await reconcileItems(items)
+          throw error
         }
-        setItems(next)
-        pushNotice('Selected posts restored.', 'success')
       }
       if (bulkAction === 'empty-trash') await emptyTrash()
       setSelectedIds([])
@@ -220,7 +278,7 @@ export function ContentListPage() {
                         {item.isImportedArchive ? <span>Imported archive</span> : item.status !== 'trash' ? (
                           <button type="button" onClick={async () => {
                             try {
-                              setItems(await upsertNativeEntry(items, { ...item, status: 'trash', workflowState: 'trash' }, 'trash'))
+                              await updatePostStatus(item, 'trash', 'trash')
                               pushNotice('Post moved to Trash.', 'warning')
                             } catch (error) {
                               pushNotice(`Trash failed: ${String(error?.message || error)}`, 'error')
@@ -230,7 +288,7 @@ export function ContentListPage() {
                           <>
                             <button type="button" onClick={async () => {
                               try {
-                                setItems(await upsertNativeEntry(items, { ...item, status: 'draft', workflowState: 'draft' }, 'restore'))
+                                await updatePostStatus(item, 'draft', 'restore')
                                 pushNotice('Post restored.', 'success')
                               } catch (error) {
                                 pushNotice(`Restore failed: ${String(error?.message || error)}`, 'error')
